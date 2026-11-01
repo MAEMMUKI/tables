@@ -45,6 +45,10 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
 .chip{font:inherit;font-size:15px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:8px}
 .chip[aria-pressed="true"]{border-color:var(--accent);background:var(--chip);box-shadow:inset 0 0 0 1px var(--accent)}
 .chip.font{font-size:17px}
+.size-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:14px;color:var(--muted)}
+.size-row input[type=range]{flex:1;min-width:140px;accent-color:var(--accent)}
+.size-row output{font-family:var(--mono);font-size:13px;min-width:44px;color:var(--ink)}
+.btn.sm{padding:6px 12px;font-size:13px;min-height:0}
 .hint-s{margin:-2px 0 4px;font-size:13px;color:var(--muted)}
 .bgdot{width:18px;height:18px;border-radius:50%;border:1px solid var(--line);flex:none}
 .logo-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
@@ -143,6 +147,7 @@ details.help ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
             <span class="msg err" id="logoErr" hidden>No pude leer esa imagen. Prueba con PNG o JPG.</span>
           </div>
           <div class="chips" id="logoShape"></div>
+          <div class="size-row"><span>Tamaño del logo</span><input type="range" id="logoSize" min="60" max="220" step="5" aria-label="Tamaño del logo"><output id="logoSizeOut">100%</output><button type="button" class="btn ghost sm" id="logoSizeReset">Normal</button></div>
         </div>
         <div class="group"><span class="label">Color de la marca</span><div class="swatches" id="swatches"></div></div>
         <div class="group"><span class="label">Fondo de la página</span><div class="chips" id="bgModes"></div></div>
@@ -400,7 +405,7 @@ const MODS = [
 function blankProfile(name){
   return {
     name:name||'Nuevo negocio', tag:'', hello:'¡Bienvenido! ¿Qué quieres hacer?', slug:slugify(name||'nuevo-negocio'),
-    color:'#4b32e0', bg:'claro', fest:'ninguno', fontTitle:'poppins', fontBody:'nunito', logo:null, logoShape:'redondeado',
+    color:'#4b32e0', bg:'claro', fest:'ninguno', fontTitle:'poppins', fontBody:'nunito', logo:null, logoShape:'redondeado', logoSize:100,
     baseSetup:150, baseMonthly:29, tables:10, coinPrice:12,
     mods: MODS.map(m => ({...m, val:''}))
   };
@@ -502,6 +507,7 @@ function metricsScript(){
   return `<script>(function(){var C="${code}",S="${slug}";if(/^(localhost|127\\.|$)/.test(location.hostname)||location.protocol==="about:")return;var q=new URLSearchParams(location.search),m=(q.get("m")||q.get("mesa")||"").replace(/\\D/g,"");var mesa=m?"mesa-"+m:"sin-mesa";function hit(p,e){try{var u="https://"+C+".goatcounter.com/count?p="+encodeURIComponent(p)+"&t="+encodeURIComponent(document.title)+(e?"&e=true":"&r="+encodeURIComponent(document.referrer))+"&rnd="+Math.random().toString(36).slice(2);if(e&&navigator.sendBeacon&&navigator.sendBeacon(u))return;new Image().src=u}catch(x){}}hit("/mesas/"+S+"/"+mesa);document.addEventListener("click",function(ev){var a=ev.target.closest&&ev.target.closest("[data-b]");if(a)hit("mesas/"+S+"/boton/"+a.getAttribute("data-b")+"/"+mesa,1)})})()<\/script>`;
 }
 
+function lgPx(n){ const k = Math.max(60, Math.min(220, +S.logoSize || 100)) / 100; return Math.round(n * k); }
 function pageHTML(){
   const on = S.mods.filter(m => m.on);
   const c = S.color, t = theme(c, S.bg), head = onColor(c);
@@ -519,12 +525,12 @@ function pageHTML(){
     : `<div class="lg ${S.logoShape==='circulo'?'circulo':''}">${esc((S.name||'?').trim().charAt(0).toUpperCase())}</div>`;
   const css = `*{box-sizing:border-box}html{min-height:100%;background:${t.page}}body{margin:0;font-family:${fb};color:${t.text};min-height:100%}
 .top{background:${c};color:${head};padding:36px 20px 60px;text-align:center}
-.lg{width:84px;height:84px;border-radius:24px;background:${head==='#ffffff'?'rgba(255,255,255,.22)':'rgba(0,0,0,.08)'};margin:0 auto 12px;display:grid;place-items:center;font-family:${ft};font-size:36px;font-weight:700;overflow:hidden}
+.lg{width:${lgPx(84)}px;height:${lgPx(84)}px;border-radius:24px;background:${head==='#ffffff'?'rgba(255,255,255,.22)':'rgba(0,0,0,.08)'};margin:0 auto 12px;display:grid;place-items:center;font-family:${ft};font-size:${lgPx(36)}px;font-weight:700;overflow:hidden}
 .lg.circulo{border-radius:50%}
 .lg.img{background:#ffffff;padding:8px}
-.lg.img.libre{background:transparent;padding:0;width:auto;height:96px;border-radius:0}
+.lg.img.libre{background:transparent;padding:0;width:auto;height:${lgPx(96)}px;border-radius:0}
 .lg img{width:100%;height:100%;object-fit:contain;display:block}
-.lg.libre img{width:auto;max-width:240px;height:96px}
+.lg.libre img{width:auto;max-width:min(${lgPx(240)}px,88vw);height:${lgPx(96)}px}
 .top h1{margin:0;font-family:${ft};font-size:28px;line-height:1.15;font-weight:700}.top p{margin:6px 0 0;opacity:.85;font-size:15px}
 .list{max-width:480px;margin:-36px auto 24px;padding:0 16px;display:grid;gap:10px}
 .hi{background:${t.card};border-radius:16px;padding:14px 16px;font-weight:600;text-align:center;box-shadow:0 6px 18px -10px rgba(0,0,0,.35)}
@@ -557,6 +563,7 @@ function renderDesign(){
   chips('festModes', FESTS, 'fest', f => `<button type="button" class="chip" data-val="${f.id}">${f.name}</button>`);
   chips('logoShape', LOGO_SHAPES, 'logoShape', s => `<button type="button" class="chip" data-val="${s.id}">${s.name}</button>`);
   renderLogoThumb();
+  $('logoSize').value = S.logoSize || 100; $('logoSizeOut').textContent = (S.logoSize || 100) + '%';
 }
 function refreshBgDots(){
   $('bgModes').querySelectorAll('.chip').forEach(b => b.querySelector('.bgdot').style.background = theme(S.color, b.dataset.val).page);
@@ -679,6 +686,8 @@ $('mods').addEventListener('click', e => {
   const ic = b.closest('.mod').querySelector('.ico'); if (ic) ic.innerHTML = svg(m.icon);
   renderAll();
 });
+$('logoSize').addEventListener('input', e => { S.logoSize = +e.target.value; $('logoSizeOut').textContent = S.logoSize + '%'; renderAll(); });
+$('logoSizeReset').addEventListener('click', () => { S.logoSize = 100; $('logoSize').value = 100; $('logoSizeOut').textContent = '100%'; renderAll(); });
 $('swatches').addEventListener('click', e => {
   const b = e.target.closest('.sw'); if (!b) return;
   setColor(b.dataset.c); const cc = $('customColor'); if (cc) cc.value = b.dataset.c;
