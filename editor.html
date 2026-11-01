@@ -305,9 +305,13 @@ const FX_SVG = {
   star: c => `<svg viewBox="0 0 24 24" width="1em" height="1em"><path fill="${c}" d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.2 1.3-6.6L2.5 9.3l6.6-.8z"/></svg>`,
   bit: c => `<svg viewBox="0 0 10 14" width=".55em" height=".8em"><rect width="10" height="14" rx="2" fill="${c}"/></svg>`
 };
+const FX_BUB = '<img src="https://maemmuki.github.io/webs.b/maemuki/burbuja.png" alt="" style="width:1.7em;height:1.7em;display:block;border-radius:50%;box-shadow:0 4px 10px -4px rgba(0,0,0,.35)">';
+const FX_SERP = c => `<svg viewBox="0 0 14 44" width=".55em" height="1.7em"><path d="M7 2c5 3.5-5 7 0 10s-5 7 0 10-5 7 0 10-5 6.5 0 10" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round"/></svg>`;
 const FESTS = [
   {id:'ninguno', name:'Ninguno'},
   {id:'auto', name:'✨ Automático'},
+  // Tema de marca: burbujas con el logo de Maemuki y serpentinas de colores (no entra en el automático)
+  {id:'maemuki', name:'🐭 Maemuki', streams:[{move:'fall', items:[FX_BUB, FX_BUB, FX_BUB, FX_SERP('#c6ff4d'), FX_SERP('#8b6bff'), FX_SERP('#4fe3ff'), FX_SERP('#ff7ad9')]}]},
   {id:'sanvalentin', name:'💗 San Valentín', streams:[{move:'rise', items:[FX_SVG.heart('#ff4d79'),FX_SVG.heart('#ff8fab'),FX_SVG.heart('#e5383b')]}]},
   {id:'sanpatricio', name:'☘️ San Patricio', streams:[{move:'fall', items:['☘️','🍀',FX_SVG.bit('#2a9d4b'),FX_SVG.bit('#f4c430')]}]},
   {id:'pascua', name:'🐣 Pascua', streams:[{move:'fall', items:['🥚','🐣','🌷','🌼']}]},
