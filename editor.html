@@ -63,6 +63,19 @@ label.upload input{position:absolute;opacity:0;width:1px;height:1px}
 .mod-top .name small{display:block;font-weight:400;color:var(--muted);font-size:13px}
 .ico{width:34px;height:34px;border-radius:10px;background:var(--chip);color:var(--accent);display:grid;place-items:center;flex:none}
 .ico svg{width:18px;height:18px}
+.order-box{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--bg);display:grid;gap:8px;margin-bottom:6px}
+.ob-head small{display:block;color:var(--muted);font-size:13px}
+.order-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.order-list li{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 8px;transition:transform .2s,background .3s}
+.order-list li.moved{background:var(--chip)}
+.order-list .pos{font-family:var(--mono);font-size:12px;color:var(--muted);width:18px;text-align:right}
+.order-list .ico{width:28px;height:28px;border-radius:8px}
+.order-list .ico svg{width:15px;height:15px}
+.order-list .lb{flex:1;font-weight:600;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mv{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:16px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0}
+.mv:disabled{opacity:.3;cursor:default}
+.mv:not(:disabled):hover{border-color:var(--accent);color:var(--accent)}
+.mv-pair{display:flex;gap:4px}
 .mods-sub{margin:14px 0 0;font-size:15px}.mods-subp{margin:-4px 0 2px;font-size:13px;color:var(--muted)}
 .mod.prop{border-style:dashed}
 .icon-pick{display:flex;flex-wrap:wrap;gap:6px}
@@ -158,6 +171,7 @@ details.help ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
 
       <section class="panel">
         <div class="row" style="justify-content:space-between"><h2>Botones</h2><span class="label">Precio: instalación · mes</span></div>
+        <div class="order-box" id="orderBox"><div class="ob-head"><b>Orden en la página</b><small>Sube o baja los botones encendidos. Así salen en el celular.</small></div><ol class="order-list" id="orderList"></ol></div>
         <div class="mods" id="mods"></div>
       </section>
 
@@ -422,7 +436,10 @@ function normalize(p){
   const base = blankProfile(p.name);
   const out = Object.assign(base, p);
   const have = Object.fromEntries((p.mods||[]).map(m => [m.id, m]));
-  out.mods = MODS.map(def => {
+  // respeta el orden guardado; los botones nuevos se agregan al final
+  const savedIds = (p.mods||[]).map(m => m.id).filter(id => MODS.some(d => d.id === id));
+  const ids = [...new Set([...savedIds, ...MODS.map(d => d.id)])];
+  out.mods = ids.map(id => MODS.find(d => d.id === id)).map(def => {
     const m = have[def.id] || {};
     const o = {...def, val: m.val || '', on: def.locked ? true : !!m.on,
       setup: m.setup ?? def.setup, monthly: m.monthly ?? def.monthly};
@@ -574,19 +591,41 @@ function renderLogoThumb(){
   $('logoRemove').hidden = !has;
 }
 function renderMods(){
-  $('mods').innerHTML = S.mods.map((m,i) => `${m.id==='p1'?'<h3 class="mods-sub">Propuestas para el cliente</h3><p class="mods-subp">Para la tarjeta NFC que le dejas a un prospecto: cambia el título y el ícono, y pega el link de cada propuesta.</p>':''}
+  const firstCustom = S.mods.findIndex(x => x.custom);
+  $('mods').innerHTML = S.mods.map((m,i) => `${i===firstCustom?'<h3 class="mods-sub">Propuestas para el cliente</h3><p class="mods-subp">Para la tarjeta NFC que le dejas a un prospecto: cambia el título y el ícono, y pega el link de cada propuesta.</p>':''}
     <div class="mod${m.on?' on':''}${m.custom?' prop':''}">
       <div class="mod-top">
         <span class="ico">${svg(m.icon)}</span>
         <span class="name">${esc(m.label)}<small>${esc(m.hint)}</small></span>
         <span class="price">${m.locked?'incluido':m.custom?'propuesta':`+$<input type="number" min="0" id="s-${m.id}" data-i="${i}" data-k="setup" value="${m.setup}" aria-label="Instalación ${esc(m.label)}"> · +$<input type="number" min="0" id="m-${m.id}" data-i="${i}" data-k="monthly" value="${m.monthly}" aria-label="Mensual ${esc(m.label)}">`}</span>
+        ${m.on?`<span class="mv-pair"><button type="button" class="mv" data-mv="-1" data-i="${i}" aria-label="Subir ${esc(m.label)}">↑</button><button type="button" class="mv" data-mv="1" data-i="${i}" aria-label="Bajar ${esc(m.label)}">↓</button></span>`:''}
         <input type="checkbox" class="toggle" id="t-${m.id}" data-i="${i}" ${m.on?'checked':''} ${m.locked?'disabled':''} aria-label="Activar ${esc(m.label)}">
       </div>
       ${m.on&&m.custom?`<input type="text" id="l-${m.id}" data-i="${i}" data-k="label" maxlength="60" value="${esc(m.label)}" placeholder="Título del botón" aria-label="Título del botón">
       <div class="icon-pick" role="group" aria-label="Ícono del botón">${ICON_CHOICES.map(k=>`<button type="button" class="ip" data-i="${i}" data-icon="${k}" aria-pressed="${k===m.icon}" aria-label="Ícono ${k}">${svg(k)}</button>`).join('')}</div>`:''}
       ${m.on?`<input type="text" id="v-${m.id}" data-i="${i}" data-k="val" value="${esc(m.val)}" placeholder="${esc(m.ph)}" aria-label="${esc(m.hint)}">`:''}
     </div>`).join('');
+  renderOrder();
 }
+// Lista corta con el orden de los botones encendidos
+function renderOrder(){
+  const on = S.mods.map((m,i) => ({m,i})).filter(x => x.m.on);
+  $('orderList').innerHTML = on.map((x,k) => `<li data-id="${esc(x.m.id)}"><span class="pos">${k+1}</span><span class="ico">${svg(x.m.icon)}</span><span class="lb">${esc(x.m.label)}</span>
+    <button type="button" class="mv" data-mv="-1" data-i="${x.i}" ${k===0?'disabled':''} aria-label="Subir ${esc(x.m.label)}">↑</button>
+    <button type="button" class="mv" data-mv="1" data-i="${x.i}" ${k===on.length-1?'disabled':''} aria-label="Bajar ${esc(x.m.label)}">↓</button></li>`).join('');
+}
+// Mueve un botón por encima/debajo del botón encendido más cercano (los apagados no cuentan)
+function moveMod(i, dir){
+  let j = i + dir;
+  while (j >= 0 && j < S.mods.length && !S.mods[j].on) j += dir;
+  if (j < 0 || j >= S.mods.length) return;
+  const [m] = S.mods.splice(i, 1);
+  S.mods.splice(j, 0, m);
+  renderMods(); renderAll();
+  const li = document.querySelector(`#orderList li[data-id="${m.id}"]`);
+  if (li) { li.classList.add('moved'); setTimeout(() => li.classList.remove('moved'), 600); const b = li.querySelector(`.mv[data-mv="${dir}"]`); (b && !b.disabled ? b : li.querySelector('.mv:not(:disabled)'))?.focus(); }
+}
+document.addEventListener('click', e => { const b = e.target.closest('.mv'); if (b && !b.disabled) moveMod(+b.dataset.i, +b.dataset.mv); });
 function totals(){
   const on = S.mods.filter(m => m.on);
   const extraSetup = on.reduce((a,m)=>a+(+m.setup||0),0);
