@@ -187,8 +187,9 @@ details.help{font-size:14px;color:var(--muted)}details.help summary{cursor:point
         <p style="margin:0;font-size:14px;color:var(--muted)">Usa la misma conexión del editor de mesas. Si ya la llenaste allá en este aparato, aparece sola.</p>
         <div class="fields">
           <label class="f">Usuario de GitHub<input type="text" id="ghUser" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
-          <label class="f">Repositorio<input type="text" id="ghRepo" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
+          <label class="f">Repositorio de la nube <small>donde se guardan tus datos · tables</small><input type="text" id="ghRepo" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
         </div>
+        <label class="f">Repositorio de las tarjetas <small>donde se publican · con <b>tuusuario.github.io</b> el link queda limpio: tuusuario.github.io/nombre/</small><input type="text" id="ghCardRepo" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
         <label class="f">Token <small>Se guarda solo en este aparato</small><input type="password" id="ghToken" autocomplete="off" placeholder="github_pat_..."></label>
         <div class="row"><button type="button" class="btn ghost" id="importBtn">Traer mis tarjetas de GitHub</button><span class="msg" id="impMsg" hidden></span></div>
       </section>
@@ -507,17 +508,21 @@ function renderItems(){
       : `<div class="two"><input type="text" data-i="${i}" data-k="label" maxlength="40" value="${esc(m.label)}" placeholder="Texto del botón" aria-label="Texto del botón"><input type="text" data-i="${i}" data-k="val" value="${esc(m.val)}" placeholder="${esc(d.ph)}" aria-label="${esc(d.hint)}"></div>`) : ''}
   </div>`; }).join('');
 }
-const siteLink = slug => { const u=(GH.user||'').trim().toLowerCase(), r=(GH.repo||'').trim(); return u&&r ? `https://${u}.github.io/${r}/t/${slug}/` : ''; };
+const cardRepo = () => (GH.cardRepo || ((GH.user||'').trim().toLowerCase() + '.github.io')).trim();
+const isUserSite = () => cardRepo().toLowerCase() === (GH.user||'').trim().toLowerCase() + '.github.io';
+const cardDir = slug => (isUserSite() ? '' : 't/') + slug;
+const siteLink = slug => { const u=(GH.user||'').trim().toLowerCase(), r=cardRepo(); return u&&r ? (isUserSite() ? `https://${u}.github.io/${slug}/` : `https://${u}.github.io/${r}/t/${slug}/`) : ''; };
+const RESERVED = ['editor','index','assets','datos','404','t','tables','webs','api','admin'];
 function renderLink(){
   const l = siteLink(C.slug); $('slugHint').textContent = l ? '· ' + l : '';
-  if (C.published && l) { $('pubLink').href = l; $('pubLink').textContent = l; $('linkBox').hidden = false; } else $('linkBox').hidden = true;
+  if (C.published && l && (C.pubRepo||'') === cardRepo()) { $('pubLink').href = l; $('pubLink').textContent = l; $('linkBox').hidden = false; } else $('linkBox').hidden = true;
 }
 let raf = 0;
 function renderAll(){ cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { $('screen').srcdoc = pageHTML(); renderLink(); save(); }); }
 function load(){
   C = DB.cards[DB.current];
   $('fName').value=C.name; $('fTitle').value=C.title; $('fCompany').value=C.company; $('fBio').value=C.bio; $('fSlug').value=C.slug;
-  $('ghUser').value=GH.user||''; $('ghRepo').value=GH.repo||''; $('ghToken').value=GH.token||'';
+  $('ghUser').value=GH.user||''; $('ghRepo').value=GH.repo||''; $('ghToken').value=GH.token||''; $('ghCardRepo').value=cardRepo();
   $('pubMsg').hidden = true; renderSelect(); renderStyle(); renderItems(); renderAll();
 }
 function showMsg(id, text, kind){ const el=$(id); el.textContent=text; el.className='msg '+(kind||''); el.hidden=false; }
@@ -533,6 +538,7 @@ document.addEventListener('input', e => {
   else if (t.dataset.k) { const m=C.items[+t.dataset.i]; m[t.dataset.k]=t.value; if (t.dataset.k==='label') { const nm=t.closest('.item').querySelector('.nm'); if (nm&&nm.firstChild) nm.firstChild.textContent=t.value||' '; } }
   else if (t.id==='ghUser') { GH.user=t.value.trim(); saveGH(); }
   else if (t.id==='ghRepo') { GH.repo=t.value.trim(); saveGH(); }
+  else if (t.id==='ghCardRepo') { GH.cardRepo=t.value.trim(); saveGH(); }
   else if (t.id==='ghToken') { GH.token=t.value.trim(); saveGH(); return; }
   else return;
   renderAll();
@@ -599,6 +605,7 @@ async function gh(method, path, body){
   if (!r.ok) {
     if (r.status===401) throw new Error('El token no es válido o ya venció. Crea uno nuevo y pégalo abajo.');
     if (r.status===403) throw new Error('El token no tiene permiso para escribir. Revisa que tenga "Contents: Read and write".');
+    if (r.status===404) throw new Error(`No encontré el repositorio "${cardRepo()}", o el token no tiene acceso a él. Revisa que exista y que el token lo incluya.`);
     if (r.status===409||r.status===422) throw new Error('GitHub rechazó el cambio. Espera unos segundos y publica otra vez.');
     throw new Error('GitHub respondió con un error ('+r.status+'). Intenta de nuevo.');
   }
@@ -609,10 +616,11 @@ $('publishBtn').addEventListener('click', async () => {
   if (needGh('pubMsg')) return;
   const btn=$('publishBtn'); btn.disabled=true; btn.textContent='Publicando…'; showMsg('pubMsg','Subiendo a GitHub…','');
   try {
-    const path=`/repos/${encodeURIComponent(GH.user)}/${encodeURIComponent(GH.repo)}/contents/t/${C.slug}/index.html`;
+    if (RESERVED.includes(C.slug)) throw new Error('Ese nombre está reservado. Cambia la dirección del link.');
+    const path=`/repos/${encodeURIComponent(GH.user)}/${encodeURIComponent(cardRepo())}/contents/${cardDir(C.slug)}/index.html`;
     const cur=await gh('GET', path);
     await gh('PUT', path, {message:`Tarjeta: ${C.name}`, content:b64(pageHTML()), ...(cur&&cur.sha?{sha:cur.sha}:{})});
-    const first=!C.published; C.published=true; save(); renderLink();
+    const first=!(C.published && C.pubRepo===cardRepo()); C.published=true; C.pubRepo=cardRepo(); save(); renderLink();
     showMsg('pubMsg', first?'Publicada. El link se activa en 1 o 2 minutos.':'Actualizada. Los cambios se ven en 1 minuto más o menos.','ok');
   } catch(err) { showMsg('pubMsg', err.message||'No se pudo publicar.','err'); }
   btn.disabled=false; btn.textContent='Publicar esta tarjeta';
@@ -620,12 +628,12 @@ $('publishBtn').addEventListener('click', async () => {
 $('importBtn').addEventListener('click', async () => {
   if (needGh('impMsg')) return; showMsg('impMsg','Buscando…','');
   try {
-    const base=`/repos/${encodeURIComponent(GH.user)}/${encodeURIComponent(GH.repo)}/contents/t`;
+    const base=`/repos/${encodeURIComponent(GH.user)}/${encodeURIComponent(cardRepo())}/contents` + (isUserSite() ? '' : '/t');
     const list=await gh('GET', base) || []; let n=0;
     for (const d of list.filter(x=>x.type==='dir')) {
       const f=await gh('GET', `${base}/${d.name}/index.html`); if (!f||!f.content) continue;
       const m=unb64(f.content).match(/<script type="application\/json" id="maemuki-card">([\s\S]*?)<\/script>/); if (!m) continue;
-      const c=normalize(JSON.parse(m[1])); c.slug=d.name; c.published=true; DB.cards[d.name]=c; n++;
+      const c=normalize(JSON.parse(m[1])); c.slug=d.name; c.published=true; c.pubRepo=cardRepo(); DB.cards[d.name]=c; n++;
     }
     save(); load(); showMsg('impMsg', n?`Listo: ${n} tarjeta${n>1?'s':''} traída${n>1?'s':''}.`:'No encontré tarjetas publicadas todavía.', n?'ok':'');
   } catch(err) { showMsg('impMsg', err.message||'No se pudo conectar con GitHub.','err'); }
@@ -641,7 +649,7 @@ async function nubeSave(auto){
   if (!auto) showMsg('nubeMsg','Guardando en la nube…','');
   try {
     await MaemukiNube.push(nubeGh(), 'tarjetas.json', {savedAt: DB.savedAt || Date.now(), seeded: DB.seeded || [], current: DB.current, items: DB['cards'],
-      gh:{user:GH.user, repo:GH.repo, token:GH.token, metrics:GH.metrics}}, MaemukiNube.getPass());
+      gh:{user:GH.user, repo:GH.repo, token:GH.token, metrics:GH.metrics, cardRepo:GH.cardRepo}}, MaemukiNube.getPass());
     showMsg('nubeMsg', (auto ? 'Guardado solo en la nube' : 'Guardado en la nube') + ' · ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}), 'ok');
   } catch(e) { showMsg('nubeMsg', e.message, 'err'); }
 }
@@ -655,7 +663,7 @@ async function nubeLoad(silent){
     if (!Object.keys(items).length) { if (!silent) showMsg('nubeMsg','La nube está vacía.',''); return; }
     DB['cards'] = items; DB.current = items[d.current] ? d.current : Object.keys(items)[0];
     DB.seeded = [...new Set([...(DB.seeded || []), ...(d.seeded || [])])];
-    if (d.gh) { if (!GH.token && d.gh.token) GH.token = d.gh.token; if (d.gh.user) GH.user = d.gh.user; if (d.gh.repo) GH.repo = d.gh.repo; if (d.gh.metrics !== undefined && 'metrics' in GH) GH.metrics = d.gh.metrics; }
+    if (d.gh) { if (!GH.token && d.gh.token) GH.token = d.gh.token; if (d.gh.user) GH.user = d.gh.user; if (d.gh.repo) GH.repo = d.gh.repo; if (d.gh.cardRepo) GH.cardRepo = d.gh.cardRepo; if (d.gh.metrics !== undefined && 'metrics' in GH) GH.metrics = d.gh.metrics; }
     DB.savedAt = d.savedAt; afterNubeLoad();
     showMsg('nubeMsg', `Listo: traje ${Object.keys(items).length} de la nube.` + (silent ? ' (había cambios más nuevos)' : ''), 'ok');
   } catch(e) { if (!silent) showMsg('nubeMsg', e.message, 'err'); }
