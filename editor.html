@@ -222,8 +222,9 @@ textarea{resize:vertical}
         <h2>Conexión con GitHub</h2>
         <div class="fields">
           <label class="f">Usuario de GitHub<input type="text" id="ghUser" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="tu-usuario"></label>
-          <label class="f">Repositorio<input type="text" id="ghRepo" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="tables"></label>
+          <label class="f">Repositorio de la nube <small>donde se guardan tus datos · tables</small><input type="text" id="ghRepo" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="tables"></label>
         </div>
+        <label class="f">Repositorio de las páginas <small>donde se publican · con <b>tuusuario.github.io</b> (o tu dominio) el link queda limpio: itsmaemuki.com/nombre/</small><input type="text" id="ghPageRepo" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
         <label class="f">Token <small>Se guarda solo en este aparato</small><input type="password" id="ghToken" autocomplete="off" placeholder="github_pat_..."></label>
         <label class="f">Código de métricas <small>GoatCounter · ej. maemuki · vacío = sin métricas</small><input type="text" id="ghMetrics" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="maemuki"></label>
         <div class="row">
@@ -726,9 +727,15 @@ function totals(){
     <div><b>Instalación total</b><b>${money(setup)}</b></div>
     <div><b>Mensualidad</b><b>${money(monthly)}/mes</b></div>`;
 }
+const pageRepo = () => (DB.gh.pageRepo || ((DB.gh.user||'').trim().toLowerCase() + '.github.io')).trim();
+const isUserSite = () => pageRepo().toLowerCase() === (DB.gh.user||'').trim().toLowerCase() + '.github.io';
+const SITE_DOMAIN = 'itsmaemuki.com'; // dominio conectado al repositorio usuario.github.io
+const RESERVED = ['en','clientes','factura','tables','webs.b','t','editor','index','assets','datos','404'];
 const siteLink = slug => {
-  const u = (DB.gh.user||'').trim().toLowerCase(), r = (DB.gh.repo||'').trim();
-  return u && r ? `https://${u}.github.io/${r}/${slug}/` : '';
+  const u = (DB.gh.user||'').trim().toLowerCase(), r = pageRepo();
+  if (!u || !r) return '';
+  if (isUserSite()) return (DB.gh.domain === false ? `https://${u}.github.io/` : `https://${SITE_DOMAIN}/`) + slug + '/';
+  return `https://${u}.github.io/${r}/${slug}/`;
 };
 function renderLinkInfo(){
   const l = siteLink(S.slug);
@@ -787,6 +794,7 @@ document.addEventListener('input', e => {
     if (k==='label') { const nm = t.closest('.mod').querySelector('.name'); if (nm && nm.firstChild) nm.firstChild.textContent = t.value || ' '; } }
   else if (t.id==='ghUser') { DB.gh.user=t.value.trim(); }
   else if (t.id==='ghRepo') { DB.gh.repo=t.value.trim(); }
+  else if (t.id==='ghPageRepo') { DB.gh.pageRepo=t.value.trim(); }
   else if (t.id==='ghToken') { DB.gh.token=t.value.trim(); save(); return; }
   else if (t.id==='ghMetrics') { DB.gh.metrics=t.value.trim().toLowerCase().replace(/[^a-z0-9-]/g,''); }
   else return;
@@ -865,7 +873,7 @@ async function gh(method, path, body){
   if (!r.ok) {
     if (r.status === 401) throw new Error('El token no es válido o ya venció. Crea uno nuevo y pégalo abajo.');
     if (r.status === 403) throw new Error('El token no tiene permiso para escribir. Revisa que tenga "Contents: Read and write" en este repositorio.');
-    if (r.status === 404) throw new Error(`No encontré el repositorio "${DB.gh.repo}" en la cuenta "${DB.gh.user}", o el token no tiene acceso a él.`);
+    if (r.status === 404) throw new Error(`No encontré el repositorio "${pageRepo()}" en la cuenta "${DB.gh.user}", o el token no tiene acceso a él.`);
     if (r.status === 409 || r.status === 422) throw new Error('GitHub rechazó el cambio. Espera unos segundos y publica otra vez.');
     throw new Error('GitHub respondió con un error (' + r.status + '). Intenta de nuevo.');
   }
@@ -880,7 +888,8 @@ $('publishBtn').addEventListener('click', async () => {
   const btn = $('publishBtn'); btn.disabled = true; btn.textContent = 'Publicando…';
   showMsg('pubMsg','Subiendo a GitHub…','');
   try {
-    const path = `/repos/${encodeURIComponent(DB.gh.user)}/${encodeURIComponent(DB.gh.repo)}/contents/${S.slug}/index.html`;
+    if (isUserSite() && RESERVED.includes(S.slug)) throw new Error('Esa dirección está reservada. Cambia la dirección del link.');
+    const path = `/repos/${encodeURIComponent(DB.gh.user)}/${encodeURIComponent(pageRepo())}/contents/${S.slug}/index.html`;
     const cur = await gh('GET', path);
     await gh('PUT', path, {message:`Publicar ${S.name}`, content:b64(pageHTML()), ...(cur && cur.sha ? {sha:cur.sha} : {})});
     const first = !S.published;
@@ -893,7 +902,7 @@ $('importBtn').addEventListener('click', async () => {
   if (needGh('impMsg')) return;
   const btn = $('importBtn'); btn.disabled = true; showMsg('impMsg','Buscando…','');
   try {
-    const base = `/repos/${encodeURIComponent(DB.gh.user)}/${encodeURIComponent(DB.gh.repo)}/contents`;
+    const base = `/repos/${encodeURIComponent(DB.gh.user)}/${encodeURIComponent(pageRepo())}/contents`;
     const list = await gh('GET', base);
     if (!list) throw new Error(`No encontré el repositorio "${DB.gh.repo}".`);
     let n = 0;
@@ -940,7 +949,7 @@ async function nubeSave(auto){
   if (!auto) showMsg('nubeMsg','Guardando en la nube…','');
   try {
     await MaemukiNube.push(nubeGh(), 'mesas.json', {savedAt: DB.savedAt || Date.now(), seeded: DB.seeded || [], current: DB.current, items: DB['profiles'],
-      gh:{user:DB.gh.user, repo:DB.gh.repo, token:DB.gh.token, metrics:DB.gh.metrics}}, MaemukiNube.getPass());
+      gh:{user:DB.gh.user, repo:DB.gh.repo, token:DB.gh.token, metrics:DB.gh.metrics, pageRepo:DB.gh.pageRepo}}, MaemukiNube.getPass());
     showMsg('nubeMsg', (auto ? 'Guardado solo en la nube' : 'Guardado en la nube') + ' · ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}), 'ok');
   } catch(e) { showMsg('nubeMsg', e.message, 'err'); }
 }
@@ -954,7 +963,7 @@ async function nubeLoad(silent){
     if (!Object.keys(items).length) { if (!silent) showMsg('nubeMsg','La nube está vacía.',''); return; }
     DB['profiles'] = items; DB.current = items[d.current] ? d.current : Object.keys(items)[0];
     DB.seeded = [...new Set([...(DB.seeded || []), ...(d.seeded || [])])];
-    if (d.gh) { if (!DB.gh.token && d.gh.token) DB.gh.token = d.gh.token; if (d.gh.user) DB.gh.user = d.gh.user; if (d.gh.repo) DB.gh.repo = d.gh.repo; if (d.gh.metrics !== undefined && 'metrics' in DB.gh) DB.gh.metrics = d.gh.metrics; }
+    if (d.gh) { if (!DB.gh.token && d.gh.token) DB.gh.token = d.gh.token; if (d.gh.user) DB.gh.user = d.gh.user; if (d.gh.repo) DB.gh.repo = d.gh.repo; if (d.gh.pageRepo) DB.gh.pageRepo = d.gh.pageRepo; if (d.gh.metrics !== undefined && 'metrics' in DB.gh) DB.gh.metrics = d.gh.metrics; }
     DB.savedAt = d.savedAt; afterNubeLoad();
     showMsg('nubeMsg', `Listo: traje ${Object.keys(items).length} de la nube.` + (silent ? ' (había cambios más nuevos)' : ''), 'ok');
   } catch(e) { if (!silent) showMsg('nubeMsg', e.message, 'err'); }
@@ -964,12 +973,12 @@ $('nubeSave').addEventListener('click', () => nubeSave(false));
 $('nubeLoad').addEventListener('click', () => nubeLoad(false));
 $('nubeAuto').addEventListener('change', e => { DB.nubeAuto = e.target.checked; save(); if (e.target.checked) scheduleNube(); });
 
-function afterNubeLoad(){ lastSaved = snapshot(); save(); $('ghUser').value = DB.gh.user||''; $('ghRepo').value = DB.gh.repo||''; $('ghToken').value = DB.gh.token||''; $('ghMetrics').value = DB.gh.metrics||''; loadProfile(); }
+function afterNubeLoad(){ lastSaved = snapshot(); save(); $('ghUser').value = DB.gh.user||''; $('ghRepo').value = DB.gh.repo||''; $('ghPageRepo').value = pageRepo(); $('ghToken').value = DB.gh.token||''; $('ghMetrics').value = DB.gh.metrics||''; loadProfile(); }
 
 (function init(){
   const l = document.createElement('link'); l.rel='stylesheet';
   l.href = gfUrl([...TITLE_FONTS, ...BODY_FONTS]); document.head.appendChild(l);
-  $('ghUser').value = DB.gh.user || ''; $('ghRepo').value = DB.gh.repo || 'tables'; $('ghToken').value = DB.gh.token || '';
+  $('ghUser').value = DB.gh.user || ''; $('ghRepo').value = DB.gh.repo || 'tables'; $('ghPageRepo').value = pageRepo(); $('ghToken').value = DB.gh.token || '';
   if (DB.gh.metrics === undefined) DB.gh.metrics = 'maemuki';
   $('ghMetrics').value = DB.gh.metrics || '';
   if (DB.nubeAuto === undefined) DB.nubeAuto = true;

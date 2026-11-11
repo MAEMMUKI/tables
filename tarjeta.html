@@ -511,8 +511,8 @@ function renderItems(){
 const cardRepo = () => (GH.cardRepo || ((GH.user||'').trim().toLowerCase() + '.github.io')).trim();
 const isUserSite = () => cardRepo().toLowerCase() === (GH.user||'').trim().toLowerCase() + '.github.io';
 const cardDir = slug => (isUserSite() ? '' : 't/') + slug;
-const siteLink = slug => { const u=(GH.user||'').trim().toLowerCase(), r=cardRepo(); return u&&r ? (isUserSite() ? `https://${u}.github.io/${slug}/` : `https://${u}.github.io/${r}/t/${slug}/`) : ''; };
-const RESERVED = ['editor','index','assets','datos','404','t','tables','webs','api','admin'];
+const siteLink = slug => { const u=(GH.user||'').trim().toLowerCase(), r=cardRepo(); return u&&r ? (isUserSite() ? `https://itsmaemuki.com/${slug}/` : `https://${u}.github.io/${r}/t/${slug}/`) : ''; };
+const RESERVED = ['editor','index','assets','datos','404','t','tables','webs','webs.b','api','admin','en','clientes','factura','oasis','jarana','jarana-resenas'];
 function renderLink(){
   const l = siteLink(C.slug); $('slugHint').textContent = l ? '· ' + l : '';
   if (C.published && l && (C.pubRepo||'') === cardRepo()) { $('pubLink').href = l; $('pubLink').textContent = l; $('linkBox').hidden = false; } else $('linkBox').hidden = true;
