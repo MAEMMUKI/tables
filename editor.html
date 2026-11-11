@@ -113,6 +113,8 @@ label.upload input{position:absolute;opacity:0;width:1px;height:1px}
 details.help{font-size:14px;color:var(--muted)}
 details.help summary{cursor:pointer;font-weight:600;color:var(--ink)}
 details.help ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
+textarea{resize:vertical}
+.ev-row{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}@media(max-width:560px){.ev-row{grid-template-columns:1fr}}
 .biz-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
 .biz-bar label.f{flex:1;min-width:200px}
 @media (prefers-reduced-motion:reduce){.toggle::after{transition:none}}
@@ -162,6 +164,7 @@ details.help ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
           <div class="chips" id="logoShape"></div>
           <div class="size-row"><span>Tamaño del logo</span><input type="range" id="logoSize" min="60" max="220" step="5" aria-label="Tamaño del logo"><output id="logoSizeOut">100%</output><button type="button" class="btn ghost sm" id="logoSizeReset">Normal</button></div>
         </div>
+        <div class="group"><span class="label">Estilo de la página</span><p class="hint-s">"Jarana" usa el negro, el naranja, el morado y la franja de triángulos andinos de su marca. En "Clásico" mandan el color y el fondo de abajo.</p><div class="chips" id="skinModes"></div></div>
         <div class="group"><span class="label">Color de la marca</span><div class="swatches" id="swatches"></div></div>
         <div class="group"><span class="label">Fondo de la página</span><div class="chips" id="bgModes"></div></div>
         <div class="group"><span class="label">Letra del nombre</span><div class="chips" id="fontTitle"></div></div>
@@ -271,6 +274,12 @@ const svg = k => `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true
 const COLORS = ['#e2557a','#f43f5e','#db2777','#c026d3','#9333ea','#7c3aed','#4b32e0','#2563eb','#0284c7','#0891b2',
   '#0d9488','#0f8f6f','#16a34a','#65a30d','#ca8a04','#f59e0b','#ea580c','#c2410c','#b91c1c','#92400e',
   '#78716c','#334155','#1f2937','#111111','#f9a8d4','#c4b5fd','#a5b4fc','#99f6e4','#d9f99d','#fde68a'];
+const SKINS = [{id:'clasico', name:'Clásico'}, {id:'jarana', name:'Jarana · andino'}];
+// Franja de triángulos andinos (colores de la marca Jarana)
+const TRI_COLORS = ['#732F21','#9B6031','#1A3F54','#00B4C7','#03482C','#00A650','#B32C31','#F0652A'];
+const TRI_SVG = (() => { let d=''; for (let k=0;k<4;k++){ const x=k*50; d+=`<path d="M${x} 0h30l-15 21z" fill="${TRI_COLORS[k*2]}"/><path d="M${x+25} 21h30l-15-21z" fill="${TRI_COLORS[k*2+1]}"/>`; } return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 21">${d}</svg>`; })();
+const TRI_URL = 'data:image/svg+xml,' + encodeURIComponent(TRI_SVG);
+const JARANA_LOGO = 'data:image/png;base64,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';
 const BG_MODES = [
   {id:'claro', name:'Claro'}, {id:'crema', name:'Crema'}, {id:'tinte', name:'Tinte del color'},
   {id:'gris', name:'Gris suave'}, {id:'marca', name:'Todo en color'}, {id:'degradado', name:'Degradado'},
@@ -412,6 +421,7 @@ const MODS = [
   {id:'order', label:'Pedir a domicilio', hint:'Link de pedidos (DoorDash, Uber Eats...)', icon:'bag', kind:'link', on:false, setup:50, monthly:10, ph:'Link de pedidos'},
   {id:'promo', label:'Promo del día', hint:'Texto que tú actualizas', icon:'tag', kind:'text', on:false, setup:40, monthly:15, ph:'Texto de la promo'},
   {id:'book', label:'Reservar mesa', hint:'Link de reservas', icon:'cal', kind:'link', on:false, setup:60, monthly:15, ph:'Link de reservas'},
+  {id:'event', label:'Evento de la semana', hint:'Evento u oferta nueva · título, texto y botón editables', icon:'spark', kind:'event', on:false, setup:40, monthly:15, ph:'Ej. Todos los viernes desde las 6 PM: cócteles, música y buena vibra.'},
   // Propuestas: título e ícono editables (para las tarjetas NFC que dejamos a prospectos)
   {id:'p1', custom:true, label:'Mira tu nueva página web', hint:'Propuesta 1 · título e ícono editables', icon:'web', kind:'link', on:false, setup:0, monthly:0, ph:'Link de la propuesta'},
   {id:'p2', custom:true, label:'Tu asistente de WhatsApp 24/7', hint:'Propuesta 2 · título e ícono editables', icon:'bot', kind:'link', on:false, setup:0, monthly:0, ph:'Link de la propuesta'},
@@ -423,7 +433,7 @@ const MODS = [
 function blankProfile(name){
   return {
     name:name||'Nuevo negocio', tag:'', hello:'¡Bienvenido! ¿Qué quieres hacer?', slug:slugify(name||'nuevo-negocio'),
-    color:'#4b32e0', bg:'claro', fest:'ninguno', fontTitle:'poppins', fontBody:'nunito', logo:null, logoShape:'redondeado', logoSize:100,
+    color:'#4b32e0', bg:'claro', skin:'clasico', fest:'ninguno', fontTitle:'poppins', fontBody:'nunito', logo:null, logoShape:'redondeado', logoSize:100,
     baseSetup:150, baseMonthly:29, tables:10, coinPrice:12,
     mods: MODS.map(m => ({...m, val:''}))
   };
@@ -433,6 +443,23 @@ function oasisProfile(){
   Object.assign(p, {tag:'Union City, NJ', slug:'oasis', color:'#e2557a', bg:'crema', fontTitle:'fraunces', fontBody:'nunito', tables:12});
   const v = {review:'https://search.google.com/local/writereview?placeid=ChIJt_AjvmJZwokR6062rCNfLBs', wa:'19734956143', vcf:'+19734956143', map:'3413 Bergenline Ave, Union City, NJ 07087', promo:'2x1 en conos de 3 a 5 PM'};
   p.mods.forEach(m => { if (v[m.id]) m.val = v[m.id]; });
+  return p;
+}
+function jaranaProfile(onlyReview){
+  const p = blankProfile(onlyReview ? 'JARANA · Reseñas' : 'JARANA');
+  Object.assign(p, {slug: onlyReview ? 'jarana-resenas' : 'jarana', tag:'Peruvian Cuisine & Pisco Bar · American Dream, NJ',
+    hello: onlyReview ? 'Thank you for celebrating with us! · ¡Gracias por venir!' : 'Welcome to JARANA! · ¡Bienvenidos!',
+    skin:'jarana', color:'#cc3700', bg:'crema', logo:JARANA_LOGO, logoShape:'libre', logoSize:100, tables:10});
+  const v = {review:'https://search.google.com/local/writereview?placeid=ChIJ-SA27Xj4wokR84EPIowUI9w',
+    ig:'https://www.instagram.com/jarana.nj/', fb:'https://www.facebook.com/jarana.nj/',
+    book:'https://www.opentable.com/r/jarana-new-jersey-peruvian-cuisine-and-pisco-bar-reservations-east-rutherford?restref=1098724',
+    event:'Every Friday night: cocktails, music and good vibes with your girls. Todos los viernes en la noche.'};
+  const L = {review:'Leave us a Google review', ig:'Follow us on Instagram', fb:'Like us on Facebook', book:'Book a table', event:'Ladies Night · Fridays'};
+  const on = onlyReview ? ['review'] : ['review','event','ig','fb'];
+  p.mods.forEach(m => { if (v[m.id]) m.val = v[m.id]; if (L[m.id]) m.label = L[m.id]; m.on = m.locked || on.includes(m.id);
+    if (m.id==='event') { m.link = v.book; m.btn = 'Reserve your table'; } });
+  // los encendidos primero, en el orden de "on"
+  p.mods.sort((a,b) => (on.includes(a.id)?on.indexOf(a.id):99) - (on.includes(b.id)?on.indexOf(b.id):99));
   return p;
 }
 // Completa perfiles viejos o importados con los botones y precios que falten
@@ -447,9 +474,12 @@ function normalize(p){
     const m = have[def.id] || {};
     const o = {...def, val: m.val || '', on: def.locked ? true : !!m.on,
       setup: m.setup ?? def.setup, monthly: m.monthly ?? def.monthly};
-    if (def.custom) { if (m.label) o.label = String(m.label).slice(0,60); if (m.icon && I[m.icon]) o.icon = m.icon; }
+    if (m.label) o.label = String(m.label).slice(0,60);
+    if (def.custom && m.icon && I[m.icon]) o.icon = m.icon;
+    if (def.kind==='event') { o.link = m.link || ''; o.btn = m.btn || 'Más información'; }
     return o;
   });
+  if (!SKINS.some(s => s.id===out.skin)) out.skin = 'clasico';
   if (!FONTS[out.fontTitle]) out.fontTitle = 'poppins';
   if (!FONTS[out.fontBody]) out.fontBody = 'nunito';
   out.slug = slugify(out.slug || out.name);
@@ -468,6 +498,11 @@ try {
   if (saved && saved.profiles) DB = Object.assign(DB, saved);
 } catch(e) {}
 if (!Object.keys(DB.profiles).length) { const o = oasisProfile(); DB.profiles[o.slug] = o; DB.current = o.slug; }
+// Plantillas de Jarana: se agregan una sola vez (si las borras, no vuelven)
+DB.seeded = DB.seeded || [];
+[['jarana', false], ['jarana-resenas', true]].forEach(([k, only]) => {
+  if (!DB.seeded.includes(k)) { if (!DB.profiles[k]) DB.profiles[k] = jaranaProfile(only); DB.seeded.push(k); }
+});
 Object.keys(DB.profiles).forEach(k => DB.profiles[k] = normalize(DB.profiles[k]));
 if (!DB.profiles[DB.current]) DB.current = Object.keys(DB.profiles)[0];
 let S = DB.profiles[DB.current];
@@ -517,7 +552,7 @@ function hrefFor(m){
 // Datos que viajan dentro de la página publicada (sin precios), para poder traerla de vuelta al editor
 function publicData(){
   const {baseSetup, baseMonthly, tables, coinPrice, ...rest} = S;
-  rest.mods = S.mods.map(({id, on, val, custom, label, icon}) => custom ? {id, on, val, label, icon} : {id, on, val});
+  rest.mods = S.mods.map(({id, on, val, custom, label, icon, kind, link, btn}) => Object.assign({id, on, val, label}, custom ? {icon} : {}, kind==='event' ? {link, btn} : {}));
   return JSON.stringify(rest).replace(/</g,'\\u003c');
 }
 
@@ -531,10 +566,15 @@ function metricsScript(){
 function lgPx(n){ const k = Math.max(60, Math.min(220, +S.logoSize || 100)) / 100; return Math.round(n * k); }
 function pageHTML(){
   const on = S.mods.filter(m => m.on);
-  const c = S.color, t = theme(c, S.bg), head = onColor(c);
-  const ft = FONTS[S.fontTitle].css, fb = FONTS[S.fontBody].css;
-  const fontLink = gfUrl([S.fontTitle, S.fontBody]);
+  const J = S.skin === 'jarana';
+  const c = J ? '#cc3700' : S.color, t = J ? {page:'#efe8dc', card:'#fffdf8', text:'#1d1b1a', border:'#e2d8c8', iconBg:'#4e204b', icon:'#ffffff'} : theme(c, S.bg), head = onColor(c);
+  const ft = J ? "'Montserrat',system-ui,sans-serif" : FONTS[S.fontTitle].css, fb = J ? "'Montserrat',system-ui,sans-serif" : FONTS[S.fontBody].css;
+  const fontLink = J ? 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap' : gfUrl([S.fontTitle, S.fontBody]);
   const items = on.map(m => {
+    if (m.kind==='event') {
+      const lk = (m.link||'').trim();
+      return `<div class="ev"><span class="evk">${svg(m.icon)}<span>${J?'Event · Evento':'Evento'}</span></span><b class="evt">${esc(m.label)}</b>${m.val?`<p>${esc(m.val)}</p>`:'<p><em>[escribe el evento u oferta]</em></p>'}${lk?`<a class="evb" data-b="event" href="${esc(lk)}" target="_blank" rel="noopener">${esc(m.btn||'Más información')} →</a>`:''}</div>`;
+    }
     if (m.kind==='text') return `<div class="it txt"><span class="i">${svg(m.icon)}</span><span><b>${esc(m.label)}</b><br>${esc(m.val)||'<em>[por completar]</em>'}</span></div>`;
     const missing = m.kind!=='vcf' && (!m.val || !m.val.trim());
     const ext = (m.kind==='tel'||m.kind==='vcf') ? '' : ' target="_blank" rel="noopener"';
@@ -544,7 +584,7 @@ function pageHTML(){
   const logo = S.logo && /^data:image\//.test(S.logo)
     ? `<div class="lg img ${S.logoShape}"><img src="${S.logo}" alt="Logo de ${esc(S.name)}"></div>`
     : `<div class="lg ${S.logoShape==='circulo'?'circulo':''}">${esc((S.name||'?').trim().charAt(0).toUpperCase())}</div>`;
-  const css = `*{box-sizing:border-box}html{min-height:100%;background:${t.page}}body{margin:0;font-family:${fb};color:${t.text};min-height:100%}
+  let css = `*{box-sizing:border-box}html{min-height:100%;background:${t.page}}body{margin:0;font-family:${fb};color:${t.text};min-height:100%}
 .top{background:${c};color:${head};padding:36px 20px 60px;text-align:center}
 .lg{width:${lgPx(84)}px;height:${lgPx(84)}px;border-radius:24px;background:${head==='#ffffff'?'rgba(255,255,255,.22)':'rgba(0,0,0,.08)'};margin:0 auto 12px;display:grid;place-items:center;font-family:${ft};font-size:${lgPx(36)}px;font-weight:700;overflow:hidden}
 .lg.circulo{border-radius:50%}
@@ -560,9 +600,33 @@ function pageHTML(){
 .it .i{width:38px;height:38px;border-radius:12px;background:${t.iconBg};color:${t.icon};display:grid;place-items:center;flex:none}
 .it.main .i{background:${head==='#ffffff'?'rgba(255,255,255,.22)':'rgba(0,0,0,.08)'};color:${head}}.it svg{width:18px;height:18px}
 .it.txt{font-weight:400}.it em{font-weight:400;font-size:12px;opacity:.7}
-.ft{text-align:center;font-size:12px;opacity:.55;padding:0 0 24px;color:${S.bg==='marca'?head:t.text}}`;
-  const body = `<div class="top">${logo}<h1>${esc(S.name)}</h1>${S.tag?`<p>${esc(S.tag)}</p>`:''}</div><div class="list"><div class="hi">${esc(S.hello)}</div>${items}</div><div class="ft">${esc(S.name)}</div>`;
-  return `<!doctype html>\n<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(S.name)}</title><meta name="theme-color" content="${c}">${fontLink?`<link rel="stylesheet" href="${fontLink}">`:''}<style>${css}</style></head><body>${body}<script type="application/json" id="maemuki-data">${publicData()}<\/script>${festScript()}${metricsScript()}</body></html>`;
+.ev{background:${J?'#4e204b':c};color:#fff;border-radius:16px;padding:16px 18px;display:grid;gap:6px;box-shadow:0 10px 22px -14px rgba(0,0,0,.5)}
+.evk{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.85}.evk svg{width:14px;height:14px}
+.evt{font-family:${ft};font-size:20px;line-height:1.2}
+.ev p{margin:0;font-size:14.5px;line-height:1.45;opacity:.92}.ev em{opacity:.7}
+.evb{justify-self:start;margin-top:6px;background:#fff;color:${J?'#4e204b':'#1b1b22'};text-decoration:none;font-weight:700;font-size:14px;border-radius:999px;padding:9px 16px}
+.ft{text-align:center;font-size:12px;opacity:.55;padding:0 0 24px;color:${!J&&S.bg==='marca'?head:t.text}}`;
+  if (J) css += `
+html,body{background:#efe8dc radial-gradient(rgba(70,50,20,.06) 1px,transparent 1.2px) 0 0/5px 5px}
+.list{position:relative;z-index:1;margin-top:20px}
+.top{padding-bottom:40px}
+.top{background:#0d0d0f;color:#fff;padding:30px 20px 40px;position:relative}
+.top::after{content:"";position:absolute;left:0;right:0;bottom:0;height:12px;background:url("${TRI_URL}") repeat-x 0 0/115px 12px}
+.top h1{font-size:22px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.top p{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.7;margin-top:8px}
+.hi{font-weight:600;font-size:15px;border-radius:4px}
+.it{border-radius:4px;font-weight:600;font-size:15px}
+.it .i{border-radius:4px}
+.it.main{background:#cc3700;border-color:#cc3700;color:#fff;box-shadow:inset 0 0 0 2px rgba(255,255,255,.55)}
+.ev{border-radius:4px;position:relative;padding-top:22px;overflow:hidden}
+.ev::before{content:"";position:absolute;left:0;right:0;top:0;height:8px;background:url("${TRI_URL}") repeat-x 0 0/77px 8px}
+.evt{text-transform:uppercase;letter-spacing:.05em;font-size:18px}
+.evb{border-radius:4px;background:#cc3700;color:#fff}
+.ft{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;padding-top:6px}
+.ft::before{content:"";display:block;width:140px;height:8px;margin:0 auto 12px;background:url("${TRI_URL}") repeat-x 0 0/77px 8px}`;
+  const showName = !(J && S.logo);
+  const body = `<div class="top">${logo}${showName?`<h1>${esc(S.name)}</h1>`:''}${S.tag?`<p>${esc(S.tag)}</p>`:''}</div><div class="list"><div class="hi">${esc(S.hello)}</div>${items}</div><div class="ft">${esc(String(S.name).replace(/\s*[·(].*$/,'') || S.name)}</div>`;
+  return `<!doctype html>\n<html lang="${J?'en':'es'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${esc(S.name)}</title><meta name="theme-color" content="${J?'#0d0d0f':c}">${fontLink?`<link rel="stylesheet" href="${fontLink}">`:''}<style>${css}</style></head><body>${body}<script type="application/json" id="maemuki-data">${publicData()}<\/script>${festScript()}${metricsScript()}</body></html>`;
 }
 
 function chips(el, list, key, labelFn){
@@ -578,6 +642,7 @@ function chips(el, list, key, labelFn){
 function renderDesign(){
   $('swatches').innerHTML = COLORS.map(c=>`<button type="button" class="sw" style="background:${c}" data-c="${c}" aria-label="Color ${c}" aria-pressed="${c===S.color}"></button>`).join('')
     + `<label class="custom">Otro<input type="color" id="customColor" value="${S.color}" aria-label="Escoger otro color"></label>`;
+  chips('skinModes', SKINS, 'skin', s => `<button type="button" class="chip" data-val="${s.id}">${s.name}</button>`);
   chips('bgModes', BG_MODES, 'bg', b => `<button type="button" class="chip" data-val="${b.id}"><span class="bgdot" style="background:${theme(S.color,b.id).page}"></span>${b.name}</button>`);
   chips('fontTitle', TITLE_FONTS, 'fontTitle', id => `<button type="button" class="chip font" data-val="${id}" style="font-family:${FONTS[id].css.replace(/"/g,'&quot;')}">${FONTS[id].name}</button>`);
   chips('fontBody', BODY_FONTS, 'fontBody', id => `<button type="button" class="chip font" data-val="${id}" style="font-family:${FONTS[id].css.replace(/"/g,'&quot;')}">${FONTS[id].name}</button>`);
@@ -605,9 +670,11 @@ function renderMods(){
         ${m.on?`<span class="mv-pair"><button type="button" class="mv" data-mv="-1" data-i="${i}" aria-label="Subir ${esc(m.label)}">↑</button><button type="button" class="mv" data-mv="1" data-i="${i}" aria-label="Bajar ${esc(m.label)}">↓</button></span>`:''}
         <input type="checkbox" class="toggle" id="t-${m.id}" data-i="${i}" ${m.on?'checked':''} ${m.locked?'disabled':''} aria-label="Activar ${esc(m.label)}">
       </div>
-      ${m.on&&m.custom?`<input type="text" id="l-${m.id}" data-i="${i}" data-k="label" maxlength="60" value="${esc(m.label)}" placeholder="Título del botón" aria-label="Título del botón">
-      <div class="icon-pick" role="group" aria-label="Ícono del botón">${ICON_CHOICES.map(k=>`<button type="button" class="ip" data-i="${i}" data-icon="${k}" aria-pressed="${k===m.icon}" aria-label="Ícono ${k}">${svg(k)}</button>`).join('')}</div>`:''}
-      ${m.on?`<input type="text" id="v-${m.id}" data-i="${i}" data-k="val" value="${esc(m.val)}" placeholder="${esc(m.ph)}" aria-label="${esc(m.hint)}">`:''}
+      ${m.on?`<input type="text" id="l-${m.id}" data-i="${i}" data-k="label" maxlength="60" value="${esc(m.label)}" placeholder="${m.kind==='event'?'Título del evento':'Texto del botón'}" aria-label="${m.kind==='event'?'Título del evento':'Texto del botón'}">`:''}
+      ${m.on&&m.custom?`<div class="icon-pick" role="group" aria-label="Ícono del botón">${ICON_CHOICES.map(k=>`<button type="button" class="ip" data-i="${i}" data-icon="${k}" aria-pressed="${k===m.icon}" aria-label="Ícono ${k}">${svg(k)}</button>`).join('')}</div>`:''}
+      ${m.on&&m.kind==='event'?`<textarea id="v-${m.id}" data-i="${i}" data-k="val" rows="3" maxlength="280" placeholder="${esc(m.ph)}" aria-label="Texto del evento">${esc(m.val)}</textarea>
+      <div class="ev-row"><input type="text" id="k-${m.id}" data-i="${i}" data-k="btn" maxlength="40" value="${esc(m.btn||'')}" placeholder="Texto del botón (ej. Reserva tu mesa)" aria-label="Texto del botón del evento"><input type="text" id="u-${m.id}" data-i="${i}" data-k="link" value="${esc(m.link||'')}" placeholder="Link del botón (opcional)" aria-label="Link del botón del evento"></div>`
+      : m.on?`<input type="text" id="v-${m.id}" data-i="${i}" data-k="val" value="${esc(m.val)}" placeholder="${esc(m.ph)}" aria-label="${esc(m.hint)}">`:''}
     </div>`).join('');
   renderOrder();
 }
@@ -704,7 +771,7 @@ document.addEventListener('input', e => {
   else if (t.id==='bizHello') S.hello=t.value;
   else if (t.id==='customColor') return setColor(t.value);
   else if (['baseSetup','baseMonthly','tables','coinPrice'].includes(t.id)) S[t.id]=+t.value;
-  else if (t.dataset.k) { const m=S.mods[t.dataset.i]; const k=t.dataset.k; m[k] = (k==='val'||k==='label') ? t.value : +t.value;
+  else if (t.dataset.k) { const m=S.mods[t.dataset.i]; const k=t.dataset.k; m[k] = ['val','label','link','btn'].includes(k) ? t.value : +t.value;
     if (k==='label') { const nm = t.closest('.mod').querySelector('.name'); if (nm && nm.firstChild) nm.firstChild.textContent = t.value || ' '; } }
   else if (t.id==='ghUser') { DB.gh.user=t.value.trim(); }
   else if (t.id==='ghRepo') { DB.gh.repo=t.value.trim(); }

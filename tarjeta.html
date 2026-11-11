@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Editor de tarjetas profesionales · Maemuki</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#f4f3f7;--surface:#fff;--ink:#17161c;--muted:#6b6878;--line:#e3e1ea;--accent:#4b32e0;--accent-ink:#fff;--good:#0f8f5b;--bad:#c2410c;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+h1{margin:0 0 6px;font-size:28px}
+h2{margin:0;font-size:18px}
+.intro{margin:0 0 22px;color:var(--muted);max-width:720px;line-height:1.5}
+.layout{display:grid;grid-template-columns:360px 1fr;gap:28px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.preview-col{position:static!important}}
+.preview-col{position:sticky;top:16px}
+.phone{width:340px;height:700px;margin:0 auto;border:10px solid #111;border-radius:42px;overflow:hidden;background:#000;box-shadow:0 30px 60px -30px rgba(0,0,0,.5)}
+.phone iframe{width:100%;height:100%;border:0;display:block;background:#fff}
+.prev-note{text-align:center;color:var(--muted);font-size:13px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;display:grid;gap:14px;margin-bottom:18px}
+.panel.hl{border-color:var(--accent)}
+.label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:560px){.fields{grid-template-columns:1fr}}
+label.f{display:grid;gap:6px;font-size:14px;font-weight:600}
+label.f small{font-weight:400;color:var(--muted)}
+input[type=text],input[type=password],input[type=email],select,textarea{font:inherit;font-weight:400;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+textarea{resize:vertical}
+input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-visible,label.upload:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.chip[aria-pressed=true]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,#fff);font-weight:700}
+.chip .dot{width:14px;height:14px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.sw[aria-pressed=true]{box-shadow:0 0 0 3px var(--accent)}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.swatches label{font-size:13px;display:flex;align-items:center;gap:6px;color:var(--muted)}
+.swatches input[type=color]{width:34px;height:30px;border:0;padding:0;background:none}
+.img-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.thumb{width:64px;height:64px;border-radius:14px;border:1px dashed var(--line);display:grid;place-items:center;font-size:11px;color:var(--muted);overflow:hidden;background:var(--bg)}
+.thumb.round{border-radius:50%}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb.logo img{object-fit:contain}
+label.upload{font-weight:700;font-size:14px;background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:9px 14px;cursor:pointer}
+label.upload input{position:absolute;opacity:0;width:1px;height:1px}
+.btn{font:inherit;font-weight:700;border:0;border-radius:12px;padding:12px 18px;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);padding:9px 14px}
+.btn.danger{background:transparent;color:var(--bad);border:1px solid var(--line);padding:9px 14px}
+.btn.sm{padding:6px 10px;font-size:13px}
+.btn:disabled{opacity:.55;cursor:wait}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.msg{font-weight:600;font-size:14px}.msg.ok{color:var(--good)}.msg.err{color:var(--bad)}
+.items{display:grid;gap:10px}
+.item{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:8px}
+.item.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 5%,#fff)}
+.item-top{display:flex;align-items:center;gap:10px}
+.item-top .ico{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--bg);flex:none}
+.item-top .ico svg{width:17px;height:17px}
+.item-top .nm{flex:1;font-weight:700;font-size:15px}
+.item-top .nm small{display:block;font-weight:400;color:var(--muted);font-size:12.5px}
+.item .two{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}@media(max-width:560px){.item .two{grid-template-columns:1fr}}
+.mv{font:inherit;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer}
+.mv:disabled{opacity:.35;cursor:default}
+.toggle{appearance:none;width:44px;height:26px;border-radius:999px;background:#d4d2dc;position:relative;cursor:pointer;flex:none;margin:0}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.toggle:checked{background:var(--accent)}.toggle:checked::after{left:21px}
+.toggle:disabled{opacity:.6;cursor:default}
+.linkbox{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.linkbox a{font-family:var(--mono);font-size:14px;color:var(--accent);word-break:break-all;flex:1;min-width:0}
+.biz-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.biz-bar label.f{flex:1;min-width:200px}
+details.help{font-size:14px;color:var(--muted)}details.help summary{cursor:pointer;font-weight:600;color:var(--ink)}
+.tip{background:#fff8e1;border:1px solid #f1df9a;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.45}
+.check{display:flex;gap:8px;align-items:center;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Editor de tarjetas profesionales</h1>
+  <p class="intro">Una tarjeta digital por persona. Llena los datos, escoge el estilo y toca <b>Publicar</b>. El link que te da es el que grabas en la tarjeta NFC (o en un código QR). Si después cambias algo y publicas otra vez, el link sigue igual.</p>
+
+  <section class="panel hl">
+    <div class="biz-bar">
+      <label class="f">Tarjeta<select id="cardSelect"></select></label>
+      <button type="button" class="btn ghost" id="cardNew">+ Nueva</button>
+      <button type="button" class="btn ghost" id="cardDup">Duplicar</button>
+      <button type="button" class="btn danger" id="cardDel">Borrar</button>
+    </div>
+  </section>
+
+  <div class="layout">
+    <div class="preview-col">
+      <div class="phone"><iframe id="screen" title="Vista previa de la tarjeta"></iframe></div>
+      <p class="prev-note">Así se ve al acercar el celular a la tarjeta</p>
+    </div>
+
+    <div>
+      <section class="panel">
+        <h2>La persona</h2>
+        <div class="img-row">
+          <div class="thumb round" id="photoThumb">Sin foto</div>
+          <label class="upload">Subir foto<input type="file" id="photoFile" accept="image/*"></label>
+          <button type="button" class="btn ghost sm" id="photoRemove" hidden>Quitar</button>
+        </div>
+        <div class="fields">
+          <label class="f">Nombre y apellido<input type="text" id="fName" maxlength="60"></label>
+          <label class="f">Cargo<input type="text" id="fTitle" maxlength="60" placeholder="Ej. Gerente de eventos"></label>
+          <label class="f">Empresa<input type="text" id="fCompany" maxlength="60"></label>
+          <label class="f">Dirección del link <small id="slugHint"></small><input type="text" id="fSlug" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
+        </div>
+        <label class="f">Frase corta <small>opcional · máximo una línea</small><input type="text" id="fBio" maxlength="110" placeholder="Ej. Organizo tu cumpleaños, aniversario o evento de empresa."></label>
+      </section>
+
+      <section class="panel">
+        <h2>Estilo</h2>
+        <div class="chips" id="styleChips"></div>
+        <div class="row">
+          <button type="button" class="btn ghost" id="fillJarana">Llenar datos de Jarana</button>
+          <span style="font-size:13px;color:var(--muted)">Pone el logo, la web, las reservas y la dirección de Jarana. Para quitarlo, escoge otro estilo y borra esos datos.</span>
+        </div>
+        <div id="accentBox"><span class="label">Color de acento</span><div class="swatches" id="swatches"></div></div>
+        <div class="img-row">
+          <div class="thumb logo" id="logoThumb">Sin logo</div>
+          <label class="upload">Logo de la empresa<input type="file" id="logoFile" accept="image/*"></label>
+          <button type="button" class="btn ghost sm" id="logoRemove" hidden>Quitar</button>
+        </div>
+        <label class="check"><input type="checkbox" id="fCredit"> Mostrar "Tarjeta digital por Maemuki" al final</label>
+      </section>
+
+      <section class="panel">
+        <h2>Botones</h2>
+        <div class="tip"><b>Menos es más:</b> "Guardar contacto" + 3 o 4 botones es lo ideal. Llamar, WhatsApp y correo salen como íconos redondos arriba; lo demás, como lista.</div>
+        <div class="items" id="items"></div>
+      </section>
+
+      <section class="panel hl">
+        <h2>Publicar</h2>
+        <div class="row">
+          <button type="button" class="btn" id="publishBtn">Publicar esta tarjeta</button>
+          <button type="button" class="btn ghost" id="downloadBtn">Descargar index.html</button>
+        </div>
+        <span class="msg" id="pubMsg" hidden></span>
+        <div class="linkbox" id="linkBox" hidden><a id="pubLink" href="#" target="_blank" rel="noopener"></a><button type="button" class="btn ghost sm" id="copyLink">Copiar link</button></div>
+        <p style="margin:0;font-size:14px;color:var(--muted)">La primera vez, GitHub tarda 1 o 2 minutos en activar el link.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Conexión con GitHub</h2>
+        <p style="margin:0;font-size:14px;color:var(--muted)">Usa la misma conexión del editor de mesas. Si ya la llenaste allá en este aparato, aparece sola.</p>
+        <div class="fields">
+          <label class="f">Usuario de GitHub<input type="text" id="ghUser" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
+          <label class="f">Repositorio<input type="text" id="ghRepo" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
+        </div>
+        <label class="f">Token <small>Se guarda solo en este aparato</small><input type="password" id="ghToken" autocomplete="off" placeholder="github_pat_..."></label>
+        <div class="row"><button type="button" class="btn ghost" id="importBtn">Traer mis tarjetas de GitHub</button><span class="msg" id="impMsg" hidden></span></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+const I = {
+  card:'<rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.6 1.7-2.3 3-2.3s2.4.7 3 2.3M14 10h4M14 13h3" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  phone:'<path d="M6.6 3.5l3 .5 1.3 4-2 1.6a12 12 0 0 0 5.5 5.5l1.6-2 4 1.3.5 3a2 2 0 0 1-2.1 2.1A17 17 0 0 1 4.5 5.6 2 2 0 0 1 6.6 3.5z"/>',
+  wa:'<path d="M12 2.5a9.4 9.4 0 0 0-8.1 14.2L2.6 21.5l4.9-1.3A9.4 9.4 0 1 0 12 2.5zm0 17a7.6 7.6 0 0 1-3.9-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A7.6 7.6 0 1 1 12 19.5zm4.2-5.7c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.5.1-.6.8-.7.9-.3.2-.5.1a6.2 6.2 0 0 1-3.1-2.7c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.7-1.7c-.2-.5-.4-.4-.5-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1 4.9 4.9 0 0 0 1 2.6 11.2 11.2 0 0 0 4.3 3.8c1.6.7 2.2.7 3 .6a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .2-1.2c-.1-.1-.2-.2-.5-.3z"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  web:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c2.5 2.6 3.7 5.6 3.7 9s-1.2 6.4-3.7 9c-2.5-2.6-3.7-5.6-3.7-9S9.5 5.6 12 3z" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  in:'<path d="M5 9h3v10H5zM6.5 4.2a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zM10 9h2.9v1.4c.5-.8 1.6-1.6 3.2-1.6 3 0 3.6 2 3.6 4.6V19h-3v-4.9c0-1.2 0-2.6-1.6-2.6s-1.9 1.2-1.9 2.5v5H10z"/>',
+  cam:'<rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.8" cy="7.2" r="1.1"/>',
+  pin:'<path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/>',
+  cal:'<rect x="4" y="5" width="16" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M9 3v4M15 3v4" stroke="currentColor" stroke-width="2"/>',
+  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+  share:'<path d="M12 3v12M7.5 7.5L12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  chev:'<path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+};
+const svg = k => `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${I[k]||I.link}</svg>`;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = id => document.getElementById(id);
+
+// kind: vcf (guardar), tel, wa, mail, link, map. quick=true → ícono redondo arriba
+const ITEMS = [
+  {id:'vcf', label:'Guardar contacto', hint:'Siempre incluido · guarda todo en el celular', icon:'card', kind:'vcf', locked:true, ph:''},
+  {id:'call', label:'Llamar', hint:'Teléfono', icon:'phone', kind:'tel', quick:true, ph:'+1 201 555 1234'},
+  {id:'wa', label:'WhatsApp', hint:'Número con código de país', icon:'wa', kind:'wa', quick:true, ph:'12015551234'},
+  {id:'email', label:'Correo', hint:'Email', icon:'mail', kind:'mail', quick:true, ph:'nombre@empresa.com'},
+  {id:'web', label:'Sitio web', hint:'Link', icon:'web', kind:'link', ph:'https://...'},
+  {id:'linkedin', label:'LinkedIn', hint:'Link del perfil', icon:'in', kind:'link', ph:'https://linkedin.com/in/...'},
+  {id:'ig', label:'Instagram', hint:'Link del perfil', icon:'cam', kind:'link', ph:'https://instagram.com/...'},
+  {id:'book', label:'Reservar', hint:'Link de reservas o citas', icon:'cal', kind:'link', ph:'https://...'},
+  {id:'map', label:'Cómo llegar', hint:'Dirección', icon:'pin', kind:'map', ph:'Dirección completa'},
+  {id:'review', label:'Déjanos una reseña', hint:'Link de reseñas de Google', icon:'star', kind:'link', ph:'https://search.google.com/local/writereview?placeid=...'},
+  {id:'c1', label:'Otro link', hint:'Botón libre · título editable', icon:'link', kind:'link', ph:'https://...'},
+  {id:'c2', label:'Otro link', hint:'Botón libre · título editable', icon:'link', kind:'link', ph:'https://...'}
+];
+const STYLES = [
+  {id:'claro', name:'Neutro claro', dot:'#ffffff'},
+  {id:'oscuro', name:'Neutro oscuro', dot:'#17181b'},
+  {id:'jarana', name:'Jarana · andino', dot:'#cc3700'}
+];
+const ACCENTS = ['#17161c','#334155','#1f3a5f','#2563eb','#0f766e','#166534','#7c2d12','#b91c1c','#be185d','#6d28d9','#a16207','#57534e'];
+const TRI_COLORS = ['#732F21','#9B6031','#1A3F54','#00B4C7','#03482C','#00A650','#B32C31','#F0652A'];
+const TRI_SVG = (() => { let d=''; for (let k=0;k<4;k++){ const x=k*50; d+=`<path d="M${x} 0h30l-15 21z" fill="${TRI_COLORS[k*2]}"/><path d="M${x+25} 21h30l-15-21z" fill="${TRI_COLORS[k*2+1]}"/>`; } return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 21">${d}</svg>`; })();
+const TRI_URL = 'data:image/svg+xml,' + encodeURIComponent(TRI_SVG);
+const JARANA = {
+  company:'JARANA', logo:'data:image/png;base64,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',
+  web:'https://jaranarestaurant.com/new-jersey/',
+  book:'https://www.opentable.com/r/jarana-new-jersey-peruvian-cuisine-and-pisco-bar-reservations-east-rutherford?restref=1098724',
+  map:'JARANA, American Dream, 1 American Dream Way, East Rutherford, NJ 07073',
+  review:'https://search.google.com/local/writereview?placeid=ChIJ-SA27Xj4wokR84EPIowUI9w',
+  ig:'https://www.instagram.com/jarana.nj/'
+};
+
+function slugify(s){
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+    .replace(/&/g,' y ').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'tarjeta';
+}
+function blankCard(name){
+  return {name:name||'Nombre Apellido', title:'', company:'', bio:'', slug:slugify(name||'nombre-apellido'),
+    style:'claro', accent:'#17161c', photo:null, logo:null, credit:true, published:false,
+    items: ITEMS.map(d => ({id:d.id, label:d.label, val:'', on: !!d.locked || ['call','wa','email'].includes(d.id)}))};
+}
+function jaranaExample(){
+  const c = blankCard('Tu Nombre');
+  Object.assign(c, {title:'Gerente de eventos', company:'JARANA', slug:'jarana-ejemplo', style:'jarana', logo:JARANA.logo,
+    bio:'Celebra tu cumpleaños, aniversario o evento de empresa con nosotros.'});
+  const v = {call:'+1 551 777 8020', wa:'', email:'info@jaranarestaurant.com', web:JARANA.web, book:JARANA.book, map:JARANA.map};
+  c.items.forEach(m => { if (v[m.id] !== undefined) m.val = v[m.id]; m.on = m.id==='vcf' || ['call','email','book','web','map'].includes(m.id); });
+  const order = ['vcf','call','email','book','web','map']; c.items.sort((a,b)=>(order.includes(a.id)?order.indexOf(a.id):99)-(order.includes(b.id)?order.indexOf(b.id):99));
+  return c;
+}
+function normalize(c){
+  const out = Object.assign(blankCard(c.name), c);
+  const have = Object.fromEntries((c.items||[]).map(m => [m.id, m]));
+  const ids = [...new Set([...(c.items||[]).map(m=>m.id).filter(id=>ITEMS.some(d=>d.id===id)), ...ITEMS.map(d=>d.id)])];
+  out.items = ids.map(id => { const d = ITEMS.find(x=>x.id===id), m = have[id] || {};
+    return {id, label: String(m.label || d.label).slice(0,40), val: m.val || '', on: d.locked ? true : !!m.on}; });
+  if (!STYLES.some(s=>s.id===out.style)) out.style = 'claro';
+  out.slug = slugify(out.slug || out.name);
+  return out;
+}
+
+const KEY = 'maemukiTarjetas', GHKEY = 'maemukiEditor';
+let DB = {current:null, cards:{}, seeded:[]};
+try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.cards) DB = Object.assign(DB, s); } catch(e) {}
+let GH = {user:'maemmuki', repo:'tables', token:''};
+try { const e = JSON.parse(localStorage.getItem(GHKEY)); if (e && e.gh) GH = Object.assign(GH, e.gh); } catch(e) {}
+DB.seeded = DB.seeded || [];
+if (!DB.seeded.includes('jarana-ejemplo')) { if (!DB.cards['jarana-ejemplo']) DB.cards['jarana-ejemplo'] = jaranaExample(); DB.seeded.push('jarana-ejemplo'); }
+if (!Object.keys(DB.cards).length) { const c = blankCard(); DB.cards[c.slug] = c; }
+Object.keys(DB.cards).forEach(k => DB.cards[k] = normalize(DB.cards[k]));
+if (!DB.cards[DB.current]) DB.current = Object.keys(DB.cards)[0];
+let C = DB.cards[DB.current];
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch(e) { showMsg('pubMsg','No pude guardar en este aparato. La foto o el logo pueden ser muy pesados.','err'); } };
+const saveGH = () => { try { const e = JSON.parse(localStorage.getItem(GHKEY)) || {current:null, profiles:{}}; e.gh = Object.assign(e.gh||{}, GH); localStorage.setItem(GHKEY, JSON.stringify(e)); } catch(e) {} };
+
+function hrefFor(m){
+  const v = (m.val||'').trim(), d = ITEMS.find(x=>x.id===m.id);
+  if (!v) return '#';
+  if (d.kind==='tel') return 'tel:' + v.replace(/[^\d+]/g,'');
+  if (d.kind==='wa') return 'https://wa.me/' + v.replace(/\D/g,'');
+  if (d.kind==='mail') return 'mailto:' + v;
+  if (d.kind==='map') return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(v);
+  return /^https?:\/\//i.test(v) ? v : 'https://' + v;
+}
+// Datos que viajan en la página (para el contacto y para traerla de vuelta al editor)
+function publicData(){
+  const {published, ...rest} = C;
+  return JSON.stringify(rest).replace(/</g,'\\u003c');
+}
+
+// Script que corre en la tarjeta publicada: arma el contacto (.vcf) con foto y comparte el link
+function cardRuntime(){
+  var D = JSON.parse(document.getElementById('maemuki-card').textContent);
+  function val(id){ for (var i=0;i<D.items.length;i++) if (D.items[i].id===id && D.items[i].on) return (D.items[i].val||'').trim(); return ''; }
+  function e(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/([,;])/g,'\\$1'); }
+  document.getElementById('save').addEventListener('click', function(ev){
+    ev.preventDefault();
+    var parts = (D.name||'').trim().split(/\s+/), last = parts.length>1 ? parts.pop() : '', first = parts.join(' ');
+    var L = ['BEGIN:VCARD','VERSION:3.0','N:'+e(last)+';'+e(first)+';;;','FN:'+e(D.name)];
+    if (D.company) L.push('ORG:'+e(D.company));
+    if (D.title) L.push('TITLE:'+e(D.title));
+    var tel = val('call'), wa = val('wa'), mail = val('email'), web = val('web'), adr = val('map');
+    if (tel) L.push('TEL;TYPE=CELL,VOICE:'+tel.replace(/[^\d+]/g,''));
+    if (wa && wa.replace(/\D/g,'') !== tel.replace(/\D/g,'')) L.push('TEL;TYPE=WHATSAPP:+'+wa.replace(/\D/g,''));
+    if (mail) L.push('EMAIL;TYPE=WORK:'+mail);
+    if (web) L.push('URL:'+(/^https?:/i.test(web)?web:'https://'+web));
+    var li = val('linkedin'); if (li) L.push('URL;TYPE=LinkedIn:'+li);
+    if (adr) L.push('ADR;TYPE=WORK:;;'+e(adr)+';;;;');
+    L.push('URL;TYPE=Tarjeta:'+location.href.split('#')[0]);
+    if (D.photo && /^data:image\/jpeg;base64,/.test(D.photo)) L.push('PHOTO;ENCODING=b;TYPE=JPEG:'+D.photo.split(',')[1]);
+    L.push('END:VCARD');
+    var blob = new Blob([L.join('\r\n')], {type:'text/vcard;charset=utf-8'});
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = (D.name||'contacto').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-') + '.vcf';
+    document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+  });
+  var sh = document.getElementById('share');
+  if (sh) sh.addEventListener('click', function(){
+    var u = location.href.split('#')[0];
+    if (navigator.share) navigator.share({title:D.name, text:(D.title?D.title+' · ':'')+(D.company||''), url:u}).catch(function(){});
+    else if (navigator.clipboard) navigator.clipboard.writeText(u).then(function(){ sh.classList.add('ok'); setTimeout(function(){ sh.classList.remove('ok'); }, 1600); });
+  });
+}
+
+function pageHTML(){
+  const st = C.style, J = st==='jarana', DK = st==='oscuro';
+  const lumOf = h => { h=h.replace('#',''); const [r,g,bb]=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255); return 0.2126*r+0.7152*g+0.0722*bb; };
+  let A = J ? '#cc3700' : (C.accent || '#17161c');
+  if (DK && lumOf(A) < 0.12) A = '#f3f3f5'; // en oscuro, un acento muy oscuro no se vería
+  const P = J ? {bg:'#efe8dc', card:'#fffdf8', ink:'#1d1b1a', muted:'#6f675d', line:'#e4dacb', soft:'#f6f0e6', icon:'#4e204b', iconInk:'#fff'}
+          : DK ? {bg:'#0e0f11', card:'#17181b', ink:'#f3f3f5', muted:'#a0a0aa', line:'#2a2b31', soft:'#202127', icon:'#26272d', iconInk:'#f3f3f5'}
+               : {bg:'#f3f3f1', card:'#ffffff', ink:'#16161a', muted:'#6c6c75', line:'#ececef', soft:'#f6f6f4', icon:'#f1f1ef', iconInk:'#16161a'};
+  const accInk = (() => { const h=A.replace('#',''); const [r,g,b]=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255); return (0.2126*r+0.7152*g+0.0722*b) > 0.55 ? '#16161a' : '#ffffff'; })();
+  const font = J ? "'Montserrat',system-ui,sans-serif" : "'Inter',system-ui,-apple-system,sans-serif";
+  const fontLink = J ? 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap' : 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap';
+  const on = C.items.filter(m => m.on && m.id!=='vcf');
+  const quick = on.filter(m => ITEMS.find(d=>d.id===m.id).quick);
+  const list = on.filter(m => !ITEMS.find(d=>d.id===m.id).quick);
+  const ext = m => ['call'].includes(m.id) ? '' : (m.id==='email' ? '' : ' target="_blank" rel="noopener"');
+  const icon = id => ITEMS.find(d=>d.id===id).icon;
+  const miss = m => !(m.val||'').trim() ? ' <em>[falta]</em>' : '';
+  const quickHTML = quick.length ? `<div class="q">${quick.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="qi">${svg(icon(m.id))}</span><span class="ql">${esc(m.label)}${miss(m)}</span></a>`).join('')}</div>` : '';
+  const listHTML = list.length ? `<div class="l">${list.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="li">${svg(icon(m.id))}</span><span class="lt">${esc(m.label)}${miss(m)}</span><span class="lc">${svg('chev')}</span></a>`).join('')}</div>` : '';
+  const photo = C.photo ? `<img class="ph" src="${C.photo}" alt="${esc(C.name)}">` : `<div class="ph ini">${esc((C.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</div>`;
+  const logo = C.logo ? `<img class="lg" src="${C.logo}" alt="${esc(C.company||'Logo')}">` : (C.company ? `<span class="lgt">${esc(C.company)}</span>` : '<span></span>');
+  const vcfLabel = (C.items.find(m=>m.id==='vcf')||{}).label || 'Guardar contacto';
+  const css = `*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:${P.bg}}
+body{font-family:${font};color:${P.ink};-webkit-font-smoothing:antialiased;padding:18px 14px 28px${J?`;background:#efe8dc radial-gradient(rgba(70,50,20,.06) 1px,transparent 1.2px) 0 0/5px 5px`:''}}
+.c{max-width:420px;margin:0 auto;background:${P.card};border-radius:${J?'6px':'24px'};overflow:hidden;box-shadow:0 1px 0 ${P.line},0 24px 48px -32px rgba(0,0,0,${DK?'.8':'.35'})}
+.hd{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;min-height:58px;${J?'background:#0d0d0f;position:relative;padding-bottom:26px':''}}
+${J?`.hd::after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px;background:url("${TRI_URL}") repeat-x 0 0/96px 10px}`:''}
+.lg{height:${J?'30px':'26px'};width:auto;max-width:65%;object-fit:contain;display:block}
+.lgt{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:${J?'#fff':P.muted}}
+#share{width:36px;height:36px;border-radius:50%;border:1px solid ${J?'rgba(255,255,255,.25)':P.line};background:transparent;color:${J?'#fff':P.ink};display:grid;place-items:center;cursor:pointer}
+#share svg{width:17px;height:17px}#share.ok{background:${A};color:${accInk};border-color:${A}}
+.me{padding:${J?'22px':'6px'} 24px 4px;text-align:center}
+.ph{width:108px;height:108px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 14px;border:3px solid ${P.card};box-shadow:0 0 0 1px ${P.line}}
+.ini{display:grid;place-items:center;background:${J?'#4e204b':P.soft};color:${J?'#fff':P.muted};font-size:34px;font-weight:600}
+h1{margin:0;font-size:${J?'22px':'25px'};line-height:1.2;font-weight:${J?'600':'700'};letter-spacing:${J?'.06em':'-.01em'};${J?'text-transform:uppercase;':''}}
+.ti{margin:6px 0 0;font-size:15px;color:${P.muted}}
+.co{margin:4px 0 0;font-size:11.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:${J?'#4e204b':A === '#17161c' ? P.muted : A}}
+.bio{margin:14px auto 0;font-size:14px;line-height:1.5;color:${P.muted};max-width:320px}
+.sv{display:flex;align-items:center;justify-content:center;gap:10px;margin:20px 20px 0;background:${A};color:${accInk};text-decoration:none;font-weight:600;font-size:16px;border-radius:${J?'4px':'14px'};padding:15px;${J?'box-shadow:inset 0 0 0 2px rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.06em;font-size:14px;':''}}
+.sv svg{width:19px;height:19px}
+.q{display:flex;justify-content:center;gap:22px;padding:20px 16px 4px}
+.q a{display:grid;justify-items:center;gap:6px;text-decoration:none;color:${P.ink};font-size:12.5px;font-weight:500;min-width:56px}
+.qi{width:52px;height:52px;border-radius:50%;background:${J?'#4e204b':P.soft};color:${J?'#fff':P.ink};display:grid;place-items:center;border:1px solid ${J?'#4e204b':P.line}}
+.qi svg{width:21px;height:21px}
+.l{margin:18px 20px 0;border-top:1px solid ${P.line}}
+.l a{display:flex;align-items:center;gap:14px;padding:14px 2px;border-bottom:1px solid ${P.line};text-decoration:none;color:${P.ink};font-size:15px;font-weight:500}
+.li{width:34px;height:34px;border-radius:${J?'4px':'10px'};background:${P.icon};color:${P.iconInk};display:grid;place-items:center;flex:none}.li svg{width:17px;height:17px}
+.lt{flex:1}.lc{color:${P.muted};display:grid}.lc svg{width:18px;height:18px}
+em{font-style:normal;font-size:11px;color:#c2410c}
+.ft{padding:22px 20px 22px;text-align:center}
+${J?`.ft::before{content:"";display:block;width:120px;height:7px;margin:0 auto 14px;background:url("${TRI_URL}") repeat-x 0 0/67px 7px}`:''}
+.ft a{font-size:11px;color:${P.muted};text-decoration:none;letter-spacing:.04em}
+.ft:empty{padding:10px}`;
+  const body = `<main class="c"><div class="hd">${logo}<button id="share" type="button" aria-label="Compartir esta tarjeta">${svg('share')}</button></div>
+<div class="me">${photo}<h1>${esc(C.name)}</h1>${C.title?`<p class="ti">${esc(C.title)}</p>`:''}${C.company?`<p class="co">${esc(C.company)}</p>`:''}${C.bio?`<p class="bio">${esc(C.bio)}</p>`:''}</div>
+<a class="sv" id="save" href="#" data-b="vcf">${svg('card')}${esc(vcfLabel)}</a>${quickHTML}${listHTML}
+<div class="ft">${C.credit?'<a href="https://maemmuki.github.io/webs.b/maemuki/" target="_blank" rel="noopener">Tarjeta digital por Maemuki</a>':''}</div></main>`;
+  const desc = [C.title, C.company].filter(Boolean).join(' · ');
+  return `<!doctype html>\n<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(C.name)}${C.company?' · '+esc(C.company):''}</title><meta name="description" content="${esc(desc)}"><meta property="og:title" content="${esc(C.name)}"><meta property="og:description" content="${esc(desc)}"><meta name="theme-color" content="${J?'#0d0d0f':P.bg}"><meta name="robots" content="noindex"><link rel="stylesheet" href="${fontLink}"><style>${css}</style></head><body>${body}<script type="application/json" id="maemuki-card">${publicData()}<\/script><script>(${cardRuntime.toString()})()<\/script></body></html>`;
+}
+
+// ===== UI =====
+function renderSelect(){
+  const keys = Object.keys(DB.cards).sort((a,b)=>DB.cards[a].name.localeCompare(DB.cards[b].name));
+  $('cardSelect').innerHTML = keys.map(k => `<option value="${esc(k)}"${k===DB.current?' selected':''}>${esc(DB.cards[k].name)}${DB.cards[k].company?' · '+esc(DB.cards[k].company):''}</option>`).join('');
+}
+function renderStyle(){
+  $('styleChips').innerHTML = STYLES.map(s => `<button type="button" class="chip" data-val="${s.id}" aria-pressed="${s.id===C.style}"><span class="dot" style="background:${s.dot}"></span>${s.name}</button>`).join('');
+  $('accentBox').hidden = C.style==='jarana';
+  $('swatches').innerHTML = ACCENTS.map(c => `<button type="button" class="sw" style="background:${c}" data-c="${c}" aria-label="Color ${c}" aria-pressed="${c===C.accent}"></button>`).join('') + `<label>Otro<input type="color" id="accentPick" value="${C.accent}"></label>`;
+  $('logoThumb').innerHTML = C.logo ? `<img src="${C.logo}" alt="">` : 'Sin logo'; $('logoRemove').hidden = !C.logo;
+  $('photoThumb').innerHTML = C.photo ? `<img src="${C.photo}" alt="">` : 'Sin foto'; $('photoRemove').hidden = !C.photo;
+  $('fCredit').checked = !!C.credit;
+}
+function renderItems(){
+  const onList = C.items.map((m,i)=>({m,i})).filter(x=>x.m.on);
+  $('items').innerHTML = C.items.map((m,i) => { const d = ITEMS.find(x=>x.id===m.id); const k = onList.findIndex(x=>x.i===i);
+    return `<div class="item${m.on?' on':''}">
+    <div class="item-top"><span class="ico">${svg(d.icon)}</span><span class="nm">${esc(m.label)}<small>${esc(d.hint)}${d.quick?' · ícono redondo':''}</small></span>
+    ${m.on && !d.locked ? `<button type="button" class="mv" data-mv="-1" data-i="${i}" ${k<=1?'disabled':''} aria-label="Subir">↑</button><button type="button" class="mv" data-mv="1" data-i="${i}" ${k===onList.length-1?'disabled':''} aria-label="Bajar">↓</button>`:''}
+    <input type="checkbox" class="toggle" data-i="${i}" ${m.on?'checked':''} ${d.locked?'disabled':''} aria-label="Activar ${esc(m.label)}"></div>
+    ${m.on ? (d.locked ? `<input type="text" data-i="${i}" data-k="label" maxlength="40" value="${esc(m.label)}" placeholder="Texto del botón" aria-label="Texto del botón">`
+      : `<div class="two"><input type="text" data-i="${i}" data-k="label" maxlength="40" value="${esc(m.label)}" placeholder="Texto del botón" aria-label="Texto del botón"><input type="text" data-i="${i}" data-k="val" value="${esc(m.val)}" placeholder="${esc(d.ph)}" aria-label="${esc(d.hint)}"></div>`) : ''}
+  </div>`; }).join('');
+}
+const siteLink = slug => { const u=(GH.user||'').trim().toLowerCase(), r=(GH.repo||'').trim(); return u&&r ? `https://${u}.github.io/${r}/t/${slug}/` : ''; };
+function renderLink(){
+  const l = siteLink(C.slug); $('slugHint').textContent = l ? '· ' + l : '';
+  if (C.published && l) { $('pubLink').href = l; $('pubLink').textContent = l; $('linkBox').hidden = false; } else $('linkBox').hidden = true;
+}
+let raf = 0;
+function renderAll(){ cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { $('screen').srcdoc = pageHTML(); renderLink(); save(); }); }
+function load(){
+  C = DB.cards[DB.current];
+  $('fName').value=C.name; $('fTitle').value=C.title; $('fCompany').value=C.company; $('fBio').value=C.bio; $('fSlug').value=C.slug;
+  $('ghUser').value=GH.user||''; $('ghRepo').value=GH.repo||''; $('ghToken').value=GH.token||'';
+  $('pubMsg').hidden = true; renderSelect(); renderStyle(); renderItems(); renderAll();
+}
+function showMsg(id, text, kind){ const el=$(id); el.textContent=text; el.className='msg '+(kind||''); el.hidden=false; }
+function uniqueKey(base){ let k=base, n=2; while (DB.cards[k]) k = base+'-'+n++; return k; }
+
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.id==='fName') { C.name=t.value; renderSelect(); }
+  else if (t.id==='fTitle') C.title=t.value;
+  else if (t.id==='fCompany') { C.company=t.value; renderSelect(); }
+  else if (t.id==='fBio') C.bio=t.value;
+  else if (t.id==='accentPick') { C.accent=t.value; }
+  else if (t.dataset.k) { const m=C.items[+t.dataset.i]; m[t.dataset.k]=t.value; if (t.dataset.k==='label') { const nm=t.closest('.item').querySelector('.nm'); if (nm&&nm.firstChild) nm.firstChild.textContent=t.value||' '; } }
+  else if (t.id==='ghUser') { GH.user=t.value.trim(); saveGH(); }
+  else if (t.id==='ghRepo') { GH.repo=t.value.trim(); saveGH(); }
+  else if (t.id==='ghToken') { GH.token=t.value.trim(); saveGH(); return; }
+  else return;
+  renderAll();
+});
+$('fSlug').addEventListener('change', e => {
+  const s = slugify(e.target.value || C.name);
+  if (s !== DB.current) { if (C.published) showMsg('pubMsg','Cambiaste la dirección: al publicar se crea un link nuevo y la tarjeta vieja seguirá abriendo el anterior.','err');
+    const k = uniqueKey(s); DB.cards[k]=C; delete DB.cards[DB.current]; DB.current=k; C.slug=k; C.published=false; }
+  e.target.value = C.slug; renderSelect(); renderAll();
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.classList.contains('toggle')) { C.items[+t.dataset.i].on = t.checked; renderItems(); renderAll(); }
+  if (t.id==='fCredit') { C.credit = t.checked; renderAll(); }
+});
+document.addEventListener('click', e => {
+  const mv = e.target.closest('.mv');
+  if (mv && !mv.disabled) { const i=+mv.dataset.i, dir=+mv.dataset.mv; let j=i+dir; while (j>0 && j<C.items.length && !C.items[j].on) j+=dir;
+    if (j>0 && j<C.items.length) { const [m]=C.items.splice(i,1); C.items.splice(j,0,m); renderItems(); renderAll(); } return; }
+  const ch = e.target.closest('#styleChips .chip'); if (ch) { C.style = ch.dataset.val; renderStyle(); renderAll(); return; }
+  const sw = e.target.closest('.sw'); if (sw) { C.accent = sw.dataset.c; renderStyle(); renderAll(); }
+});
+$('fillJarana').addEventListener('click', () => {
+  C.style='jarana'; C.company = C.company || JARANA.company; C.logo = JARANA.logo;
+  const set = {web:JARANA.web, book:JARANA.book, map:JARANA.map};
+  C.items.forEach(m => { if (set[m.id] && !m.val) { m.val = set[m.id]; m.on = true; } });
+  $('fCompany').value = C.company; renderStyle(); renderItems(); renderAll(); renderSelect();
+});
+function readImage(file, max, type, cb){
+  const r = new FileReader();
+  r.onload = () => { const img = new Image(); img.onload = () => {
+    let w=img.width, h=img.height, sx=0, sy=0, sw=w, sh=h;
+    if (type==='image/jpeg') { const s=Math.min(w,h); sx=(w-s)/2; sy=(h-s)/2; sw=sh=s; w=h=Math.min(max,s); }
+    else { const k=Math.min(1,max/Math.max(w,h)); w=Math.round(w*k); h=Math.round(h*k); }
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const x=cv.getContext('2d');
+    if (type==='image/jpeg') { x.fillStyle='#fff'; x.fillRect(0,0,w,h); }
+    x.drawImage(img,sx,sy,sw,sh,0,0,w,h); cb(cv.toDataURL(type, .86)); }; img.src = r.result; };
+  r.readAsDataURL(file);
+}
+$('photoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 320, 'image/jpeg', d => { C.photo=d; renderStyle(); renderAll(); }); e.target.value=''; });
+$('logoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 400, 'image/png', d => { C.logo=d; renderStyle(); renderAll(); }); e.target.value=''; });
+$('photoRemove').addEventListener('click', () => { C.photo=null; renderStyle(); renderAll(); });
+$('logoRemove').addEventListener('click', () => { C.logo=null; renderStyle(); renderAll(); });
+$('cardSelect').addEventListener('change', e => { DB.current=e.target.value; save(); load(); });
+$('cardNew').addEventListener('click', () => { const c=blankCard('Nombre Apellido'); c.slug=uniqueKey(c.slug); DB.cards[c.slug]=c; DB.current=c.slug; load(); $('fName').focus(); $('fName').select(); });
+$('cardDup').addEventListener('click', () => { const c=structuredClone(C); c.name=C.name+' (copia)'; c.slug=uniqueKey(slugify(c.name)); c.published=false; DB.cards[c.slug]=c; DB.current=c.slug; load(); });
+let delArmed=0;
+$('cardDel').addEventListener('click', () => {
+  if (Object.keys(DB.cards).length<2) { $('cardDel').textContent='Necesitas al menos una'; setTimeout(()=>$('cardDel').textContent='Borrar',2000); return; }
+  if (!delArmed) { $('cardDel').textContent='¿Seguro? Toca otra vez'; delArmed=setTimeout(()=>{delArmed=0;$('cardDel').textContent='Borrar';},3500); return; }
+  clearTimeout(delArmed); delArmed=0; $('cardDel').textContent='Borrar'; delete DB.cards[DB.current]; DB.current=Object.keys(DB.cards)[0]; load();
+});
+$('copyLink').addEventListener('click', () => { navigator.clipboard && navigator.clipboard.writeText($('pubLink').href).then(()=>{ $('copyLink').textContent='Copiado'; setTimeout(()=>$('copyLink').textContent='Copiar link',1800); }); });
+$('downloadBtn').addEventListener('click', () => { const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([pageHTML()],{type:'text/html'})); a.download='index.html'; document.body.appendChild(a); a.click(); a.remove(); });
+
+// GitHub
+function b64(str){ const bytes=new TextEncoder().encode(str); let bin=''; for (let i=0;i<bytes.length;i+=0x8000) bin+=String.fromCharCode.apply(null, bytes.subarray(i,i+0x8000)); return btoa(bin); }
+function unb64(s){ const bin=atob(s.replace(/\s/g,'')); const a=new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return new TextDecoder().decode(a); }
+async function gh(method, path, body){
+  const r = await fetch('https://api.github.com'+path, {method, headers:{'Authorization':'Bearer '+GH.token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28', ...(body?{'Content-Type':'application/json'}:{})}, body: body?JSON.stringify(body):undefined});
+  if (r.status===404 && method==='GET') return null;
+  if (!r.ok) {
+    if (r.status===401) throw new Error('El token no es válido o ya venció. Crea uno nuevo y pégalo abajo.');
+    if (r.status===403) throw new Error('El token no tiene permiso para escribir. Revisa que tenga "Contents: Read and write".');
+    if (r.status===409||r.status===422) throw new Error('GitHub rechazó el cambio. Espera unos segundos y publica otra vez.');
+    throw new Error('GitHub respondió con un error ('+r.status+'). Intenta de nuevo.');
+  }
+  return r.status===204 ? {} : r.json();
+}
+function needGh(id){ if (!GH.user||!GH.repo||!GH.token) { showMsg(id,'Primero llena usuario, repositorio y token en "Conexión con GitHub".','err'); $('ghToken').focus(); return true; } return false; }
+$('publishBtn').addEventListener('click', async () => {
+  if (needGh('pubMsg')) return;
+  const btn=$('publishBtn'); btn.disabled=true; btn.textContent='Publicando…'; showMsg('pubMsg','Subiendo a GitHub…','');
+  try {
+    const path=`/repos/${encodeURIComponent(GH.user)}/${encodeURIComponent(GH.repo)}/contents/t/${C.slug}/index.html`;
+    const cur=await gh('GET', path);
+    await gh('PUT', path, {message:`Tarjeta: ${C.name}`, content:b64(pageHTML()), ...(cur&&cur.sha?{sha:cur.sha}:{})});
+    const first=!C.published; C.published=true; save(); renderLink();
+    showMsg('pubMsg', first?'Publicada. El link se activa en 1 o 2 minutos.':'Actualizada. Los cambios se ven en 1 minuto más o menos.','ok');
+  } catch(err) { showMsg('pubMsg', err.message||'No se pudo publicar.','err'); }
+  btn.disabled=false; btn.textContent='Publicar esta tarjeta';
+});
+$('importBtn').addEventListener('click', async () => {
+  if (needGh('impMsg')) return; showMsg('impMsg','Buscando…','');
+  try {
+    const base=`/repos/${encodeURIComponent(GH.user)}/${encodeURIComponent(GH.repo)}/contents/t`;
+    const list=await gh('GET', base) || []; let n=0;
+    for (const d of list.filter(x=>x.type==='dir')) {
+      const f=await gh('GET', `${base}/${d.name}/index.html`); if (!f||!f.content) continue;
+      const m=unb64(f.content).match(/<script type="application\/json" id="maemuki-card">([\s\S]*?)<\/script>/); if (!m) continue;
+      const c=normalize(JSON.parse(m[1])); c.slug=d.name; c.published=true; DB.cards[d.name]=c; n++;
+    }
+    save(); load(); showMsg('impMsg', n?`Listo: ${n} tarjeta${n>1?'s':''} traída${n>1?'s':''}.`:'No encontré tarjetas publicadas todavía.', n?'ok':'');
+  } catch(err) { showMsg('impMsg', err.message||'No se pudo conectar con GitHub.','err'); }
+});
+load();
+</script>
+</body>
+</html>
