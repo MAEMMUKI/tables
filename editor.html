@@ -209,6 +209,15 @@ textarea{resize:vertical}
         </details>
       </section>
 
+      <section class="panel hl">
+        <h2>Nube · editar desde cualquier aparato</h2>
+        <p style="margin:0;font-size:14px;color:var(--muted);line-height:1.5">Guarda todos tus negocios en tu GitHub, <b>cifrados con tu clave</b> (nadie más los puede leer). En el celular o en otra computadora abre este mismo editor, escribe la misma clave y toca <b>Traer de la nube</b>. No necesitas volver a poner el token: viaja cifrado.</p>
+        <label class="f">Clave de la nube <small>la misma en todos tus aparatos · mínimo 8 letras o números · no la olvides</small><input type="password" id="nubePass" autocomplete="new-password" spellcheck="false"></label>
+        <div class="row"><button type="button" class="btn" id="nubeSave">Guardar en la nube</button><button type="button" class="btn ghost" id="nubeLoad">Traer de la nube</button></div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="nubeAuto"> Guardar en la nube solo cada vez que cambio algo</label>
+        <span class="msg" id="nubeMsg" hidden></span>
+      </section>
+
       <section class="panel">
         <h2>Conexión con GitHub</h2>
         <div class="fields">
@@ -242,6 +251,7 @@ textarea{resize:vertical}
   <div class="tot big"><span>Mensual</span><b id="tMonthly">$0</b></div>
 </div></div>
 
+<script src="nube.js?v=1"></script>
 <script>
 const I = {
   star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
@@ -506,7 +516,9 @@ DB.seeded = DB.seeded || [];
 Object.keys(DB.profiles).forEach(k => DB.profiles[k] = normalize(DB.profiles[k]));
 if (!DB.profiles[DB.current]) DB.current = Object.keys(DB.profiles)[0];
 let S = DB.profiles[DB.current];
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(DB)) } catch(e) { showMsg('pubMsg','No pude guardar en este aparato. El logo puede ser muy pesado.','err'); } };
+const snapshot = () => JSON.stringify({p:DB.profiles, c:DB.current});
+let lastSaved = snapshot();
+const save = () => { try { const s = snapshot(); if (s !== lastSaved) { lastSaved = s; DB.savedAt = Date.now(); scheduleNube(); } localStorage.setItem(KEY, JSON.stringify(DB)) } catch(e) { showMsg('pubMsg','No pude guardar en este aparato. El logo puede ser muy pesado.','err'); } };
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = n => '$' + Math.round(n).toLocaleString('en-US');
@@ -916,13 +928,54 @@ $('copyLink').addEventListener('click', () => {
   if (navigator.clipboard) navigator.clipboard.writeText(l).then(done).catch(()=>{});
 });
 
+
+// ===== Nube: guardar y traer desde cualquier aparato =====
+let nubeTimer = 0;
+function nubeGh(){ return {user:DB.gh.user, repo:DB.gh.repo, token:DB.gh.token}; }
+function scheduleNube(){
+  if (!DB.nubeAuto || !MaemukiNube.getPass() || !DB.gh.token) return;
+  clearTimeout(nubeTimer); nubeTimer = setTimeout(() => nubeSave(true), 6000);
+}
+async function nubeSave(auto){
+  if (!auto) showMsg('nubeMsg','Guardando en la nube…','');
+  try {
+    await MaemukiNube.push(nubeGh(), 'mesas.json', {savedAt: DB.savedAt || Date.now(), seeded: DB.seeded || [], current: DB.current, items: DB['profiles'],
+      gh:{user:DB.gh.user, repo:DB.gh.repo, token:DB.gh.token, metrics:DB.gh.metrics}}, MaemukiNube.getPass());
+    showMsg('nubeMsg', (auto ? 'Guardado solo en la nube' : 'Guardado en la nube') + ' · ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}), 'ok');
+  } catch(e) { showMsg('nubeMsg', e.message, 'err'); }
+}
+async function nubeLoad(silent){
+  if (!silent) showMsg('nubeMsg','Buscando en la nube…','');
+  try {
+    const d = await MaemukiNube.pull(nubeGh(), 'mesas.json', MaemukiNube.getPass());
+    if (!d) { if (!silent) showMsg('nubeMsg','Todavía no hay nada guardado en la nube. Guarda primero desde el aparato donde lo hiciste.',''); return; }
+    if (silent && (DB.savedAt || 0) >= (d.savedAt || 0)) return;
+    const items = {}; Object.keys(d.items || {}).forEach(k => items[k] = normalize(d.items[k]));
+    if (!Object.keys(items).length) { if (!silent) showMsg('nubeMsg','La nube está vacía.',''); return; }
+    DB['profiles'] = items; DB.current = items[d.current] ? d.current : Object.keys(items)[0];
+    DB.seeded = [...new Set([...(DB.seeded || []), ...(d.seeded || [])])];
+    if (d.gh) { if (!DB.gh.token && d.gh.token) DB.gh.token = d.gh.token; if (d.gh.user) DB.gh.user = d.gh.user; if (d.gh.repo) DB.gh.repo = d.gh.repo; if (d.gh.metrics !== undefined && 'metrics' in DB.gh) DB.gh.metrics = d.gh.metrics; }
+    DB.savedAt = d.savedAt; afterNubeLoad();
+    showMsg('nubeMsg', `Listo: traje ${Object.keys(items).length} de la nube.` + (silent ? ' (había cambios más nuevos)' : ''), 'ok');
+  } catch(e) { if (!silent) showMsg('nubeMsg', e.message, 'err'); }
+}
+$('nubePass').addEventListener('input', e => { MaemukiNube.setPass(e.target.value); });
+$('nubeSave').addEventListener('click', () => nubeSave(false));
+$('nubeLoad').addEventListener('click', () => nubeLoad(false));
+$('nubeAuto').addEventListener('change', e => { DB.nubeAuto = e.target.checked; save(); if (e.target.checked) scheduleNube(); });
+
+function afterNubeLoad(){ lastSaved = snapshot(); save(); $('ghUser').value = DB.gh.user||''; $('ghRepo').value = DB.gh.repo||''; $('ghToken').value = DB.gh.token||''; $('ghMetrics').value = DB.gh.metrics||''; loadProfile(); }
+
 (function init(){
   const l = document.createElement('link'); l.rel='stylesheet';
   l.href = gfUrl([...TITLE_FONTS, ...BODY_FONTS]); document.head.appendChild(l);
   $('ghUser').value = DB.gh.user || ''; $('ghRepo').value = DB.gh.repo || 'tables'; $('ghToken').value = DB.gh.token || '';
   if (DB.gh.metrics === undefined) DB.gh.metrics = 'maemuki';
   $('ghMetrics').value = DB.gh.metrics || '';
+  if (DB.nubeAuto === undefined) DB.nubeAuto = true;
+  $('nubePass').value = MaemukiNube.getPass(); $('nubeAuto').checked = !!DB.nubeAuto;
   loadProfile();
+  if (MaemukiNube.getPass()) nubeLoad(true);
 })();
 </script>
 </body>

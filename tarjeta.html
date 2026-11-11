@@ -173,6 +173,15 @@ details.help{font-size:14px;color:var(--muted)}details.help summary{cursor:point
         <p style="margin:0;font-size:14px;color:var(--muted)">La primera vez, GitHub tarda 1 o 2 minutos en activar el link.</p>
       </section>
 
+      <section class="panel hl">
+        <h2>Nube · editar desde cualquier aparato</h2>
+        <p style="margin:0;font-size:14px;color:var(--muted);line-height:1.5">Guarda todas tus tarjetas en tu GitHub, <b>cifrados con tu clave</b> (nadie más los puede leer). En el celular o en otra computadora abre este mismo editor, escribe la misma clave y toca <b>Traer de la nube</b>. No necesitas volver a poner el token: viaja cifrado.</p>
+        <label class="f">Clave de la nube <small>la misma en todos tus aparatos · mínimo 8 letras o números · no la olvides</small><input type="password" id="nubePass" autocomplete="new-password" spellcheck="false"></label>
+        <div class="row"><button type="button" class="btn" id="nubeSave">Guardar en la nube</button><button type="button" class="btn ghost" id="nubeLoad">Traer de la nube</button></div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="nubeAuto"> Guardar en la nube solo cada vez que cambio algo</label>
+        <span class="msg" id="nubeMsg" hidden></span>
+      </section>
+
       <section class="panel">
         <h2>Conexión con GitHub</h2>
         <p style="margin:0;font-size:14px;color:var(--muted)">Usa la misma conexión del editor de mesas. Si ya la llenaste allá en este aparato, aparece sola.</p>
@@ -187,6 +196,7 @@ details.help{font-size:14px;color:var(--muted)}details.help summary{cursor:point
   </div>
 </div>
 
+<script src="nube.js?v=1"></script>
 <script>
 const I = {
   card:'<rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.6 1.7-2.3 3-2.3s2.4.7 3 2.3M14 10h4M14 13h3" fill="none" stroke="currentColor" stroke-width="1.8"/>',
@@ -322,7 +332,9 @@ if (!Object.keys(DB.cards).length) { const c = blankCard(); DB.cards[c.slug] = c
 Object.keys(DB.cards).forEach(k => DB.cards[k] = normalize(DB.cards[k]));
 if (!DB.cards[DB.current]) DB.current = Object.keys(DB.cards)[0];
 let C = DB.cards[DB.current];
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch(e) { showMsg('pubMsg','No pude guardar en este aparato. La foto o el logo pueden ser muy pesados.','err'); } };
+const snapshot = () => JSON.stringify({p:DB.cards, c:DB.current});
+let lastSaved = snapshot();
+const save = () => { try { const s = snapshot(); if (s !== lastSaved) { lastSaved = s; DB.savedAt = Date.now(); scheduleNube(); } localStorage.setItem(KEY, JSON.stringify(DB)); } catch(e) { showMsg('pubMsg','No pude guardar en este aparato. La foto o el logo pueden ser muy pesados.','err'); } };
 const saveGH = () => { try { const e = JSON.parse(localStorage.getItem(GHKEY)) || {current:null, profiles:{}}; e.gh = Object.assign(e.gh||{}, GH); localStorage.setItem(GHKEY, JSON.stringify(e)); } catch(e) {} };
 
 function hrefFor(m){
@@ -618,7 +630,46 @@ $('importBtn').addEventListener('click', async () => {
     save(); load(); showMsg('impMsg', n?`Listo: ${n} tarjeta${n>1?'s':''} traída${n>1?'s':''}.`:'No encontré tarjetas publicadas todavía.', n?'ok':'');
   } catch(err) { showMsg('impMsg', err.message||'No se pudo conectar con GitHub.','err'); }
 });
+// ===== Nube: guardar y traer desde cualquier aparato =====
+let nubeTimer = 0;
+function nubeGh(){ return {user:GH.user, repo:GH.repo, token:GH.token}; }
+function scheduleNube(){
+  if (!DB.nubeAuto || !MaemukiNube.getPass() || !GH.token) return;
+  clearTimeout(nubeTimer); nubeTimer = setTimeout(() => nubeSave(true), 6000);
+}
+async function nubeSave(auto){
+  if (!auto) showMsg('nubeMsg','Guardando en la nube…','');
+  try {
+    await MaemukiNube.push(nubeGh(), 'tarjetas.json', {savedAt: DB.savedAt || Date.now(), seeded: DB.seeded || [], current: DB.current, items: DB['cards'],
+      gh:{user:GH.user, repo:GH.repo, token:GH.token, metrics:GH.metrics}}, MaemukiNube.getPass());
+    showMsg('nubeMsg', (auto ? 'Guardado solo en la nube' : 'Guardado en la nube') + ' · ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}), 'ok');
+  } catch(e) { showMsg('nubeMsg', e.message, 'err'); }
+}
+async function nubeLoad(silent){
+  if (!silent) showMsg('nubeMsg','Buscando en la nube…','');
+  try {
+    const d = await MaemukiNube.pull(nubeGh(), 'tarjetas.json', MaemukiNube.getPass());
+    if (!d) { if (!silent) showMsg('nubeMsg','Todavía no hay nada guardado en la nube. Guarda primero desde el aparato donde lo hiciste.',''); return; }
+    if (silent && (DB.savedAt || 0) >= (d.savedAt || 0)) return;
+    const items = {}; Object.keys(d.items || {}).forEach(k => items[k] = normalize(d.items[k]));
+    if (!Object.keys(items).length) { if (!silent) showMsg('nubeMsg','La nube está vacía.',''); return; }
+    DB['cards'] = items; DB.current = items[d.current] ? d.current : Object.keys(items)[0];
+    DB.seeded = [...new Set([...(DB.seeded || []), ...(d.seeded || [])])];
+    if (d.gh) { if (!GH.token && d.gh.token) GH.token = d.gh.token; if (d.gh.user) GH.user = d.gh.user; if (d.gh.repo) GH.repo = d.gh.repo; if (d.gh.metrics !== undefined && 'metrics' in GH) GH.metrics = d.gh.metrics; }
+    DB.savedAt = d.savedAt; afterNubeLoad();
+    showMsg('nubeMsg', `Listo: traje ${Object.keys(items).length} de la nube.` + (silent ? ' (había cambios más nuevos)' : ''), 'ok');
+  } catch(e) { if (!silent) showMsg('nubeMsg', e.message, 'err'); }
+}
+$('nubePass').addEventListener('input', e => { MaemukiNube.setPass(e.target.value); });
+$('nubeSave').addEventListener('click', () => nubeSave(false));
+$('nubeLoad').addEventListener('click', () => nubeLoad(false));
+$('nubeAuto').addEventListener('change', e => { DB.nubeAuto = e.target.checked; save(); if (e.target.checked) scheduleNube(); });
+
+function afterNubeLoad(){ lastSaved = snapshot(); save(); saveGH(); load(); }
+if (DB.nubeAuto === undefined) DB.nubeAuto = true;
+$('nubePass').value = MaemukiNube.getPass(); $('nubeAuto').checked = !!DB.nubeAuto;
 load();
+if (MaemukiNube.getPass()) nubeLoad(true);
 </script>
 </body>
 </html>
