@@ -73,6 +73,18 @@ label.upload input{position:absolute;opacity:0;width:1px;height:1px}
 details.help{font-size:14px;color:var(--muted)}details.help summary{cursor:pointer;font-weight:600;color:var(--ink)}
 .tip{background:#fff8e1;border:1px solid #f1df9a;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.45}
 .check{display:flex;gap:8px;align-items:center;font-size:14px}
+.sub{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:12px}
+.amb{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px;margin-top:8px}
+.amb button{font:inherit;border:1px solid var(--line);border-radius:12px;padding:0;overflow:hidden;cursor:pointer;background:#fff;text-align:left}
+.amb button[aria-pressed=true]{outline:3px solid var(--accent);outline-offset:1px}
+.amb .sw2{height:54px;display:flex;align-items:center;justify-content:center;gap:6px}
+.amb .sw2 i{display:block;width:44px;height:30px;box-shadow:0 6px 12px -6px rgba(0,0,0,.5)}
+.amb .sw2 b{display:block;width:16px;height:16px;border-radius:50%}
+.amb span{display:block;padding:7px 10px;font-size:13px;font-weight:600}
+.colors{display:flex;flex-wrap:wrap;gap:12px}
+.cp{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;border:1px solid var(--line);border-radius:10px;padding:6px 10px 6px 6px;cursor:pointer}
+.cp input{width:34px;height:30px;border:0;padding:0;background:none;cursor:pointer}
+.chip.font{font-size:15px}
 </style>
 </head>
 <body>
@@ -113,13 +125,29 @@ details.help{font-size:14px;color:var(--muted)}details.help summary{cursor:point
       </section>
 
       <section class="panel">
-        <h2>Estilo</h2>
-        <div class="chips" id="styleChips"></div>
+        <h2>Diseño</h2>
+        <div class="tip">Para que se vea profesional: <b>una sola letra de títulos y una de texto</b>, mucho espacio, buen contraste (letras oscuras sobre claro o al revés) y una <b>foto de buena calidad</b>, cuadrada y con la cara centrada.</div>
+        <div><span class="label">Ambiente · aplica colores, letras y forma de una vez</span><div class="amb" id="ambChips"></div></div>
         <div class="row">
           <button type="button" class="btn ghost" id="fillJarana">Llenar datos de Jarana</button>
-          <span style="font-size:13px;color:var(--muted)">Pone el logo, la web, las reservas y la dirección de Jarana. Para quitarlo, escoge otro estilo y borra esos datos.</span>
+          <span style="font-size:13px;color:var(--muted)">Pone el ambiente Jarana, su logo, web, reservas y dirección. Para quitarlo, escoge otro ambiente y quita el logo.</span>
         </div>
-        <div id="accentBox"><span class="label">Color de acento</span><div class="swatches" id="swatches"></div></div>
+        <div id="customBox" class="sub">
+          <span class="label">Colores</span>
+          <div class="colors">
+            <label class="cp"><input type="color" id="cPage"><span>Fondo</span></label>
+            <label class="cp"><input type="color" id="cCard"><span>Cuadro</span></label>
+            <label class="cp"><input type="color" id="cAccent"><span>Botón principal</span></label>
+            <label class="cp"><input type="color" id="cIcon"><span>Íconos</span></label>
+          </div>
+          <span class="label">Letra del nombre</span><div class="chips" id="fontTitleChips"></div>
+          <span class="label">Letra del texto</span><div class="chips" id="fontBodyChips"></div>
+          <span class="label">Nombre en</span><div class="chips" id="caseChips"></div>
+        </div>
+        <span class="label">Forma del cuadro</span><div class="chips" id="shapeChips"></div>
+        <span class="label">Sombra y borde</span><div class="chips" id="shadowChips"></div>
+        <span class="label">Detalle</span><div class="chips" id="decorChips"></div>
+        <span class="label">Textura del fondo</span><div class="chips" id="patternChips"></div>
         <div class="img-row">
           <div class="thumb logo" id="logoThumb">Sin logo</div>
           <label class="upload">Logo de la empresa<input type="file" id="logoFile" accept="image/*"></label>
@@ -194,12 +222,48 @@ const ITEMS = [
   {id:'c1', label:'Otro link', hint:'Botón libre · título editable', icon:'link', kind:'link', ph:'https://...'},
   {id:'c2', label:'Otro link', hint:'Botón libre · título editable', icon:'link', kind:'link', ph:'https://...'}
 ];
-const STYLES = [
-  {id:'claro', name:'Neutro claro', dot:'#ffffff'},
-  {id:'oscuro', name:'Neutro oscuro', dot:'#17181b'},
-  {id:'jarana', name:'Jarana · andino', dot:'#cc3700'}
+// Letras profesionales (Google Fonts)
+const FONTS = {
+  inter:{name:'Inter', css:"'Inter',system-ui,sans-serif", gf:'Inter:wght@400;500;600;700'},
+  manrope:{name:'Manrope', css:"'Manrope',system-ui,sans-serif", gf:'Manrope:wght@400;500;600;700;800'},
+  montserrat:{name:'Montserrat', css:"'Montserrat',system-ui,sans-serif", gf:'Montserrat:wght@400;500;600;700'},
+  sora:{name:'Sora', css:"'Sora',system-ui,sans-serif", gf:'Sora:wght@400;500;600;700'},
+  spacegrotesk:{name:'Space Grotesk', css:"'Space Grotesk',system-ui,sans-serif", gf:'Space+Grotesk:wght@400;500;600;700'},
+  archivo:{name:'Archivo', css:"'Archivo',system-ui,sans-serif", gf:'Archivo:wght@400;500;600;700;800'},
+  oswald:{name:'Oswald', css:"'Oswald',system-ui,sans-serif", gf:'Oswald:wght@400;500;600'},
+  barlowc:{name:'Barlow Condensed', css:"'Barlow Condensed',system-ui,sans-serif", gf:'Barlow+Condensed:wght@500;600;700'},
+  bebas:{name:'Bebas Neue', css:"'Bebas Neue',system-ui,sans-serif", gf:'Bebas+Neue', heavy:true},
+  playfair:{name:'Playfair Display', css:"'Playfair Display',Georgia,serif", gf:'Playfair+Display:wght@500;600;700'},
+  cormorant:{name:'Cormorant', css:"'Cormorant Garamond',Georgia,serif", gf:'Cormorant+Garamond:wght@500;600;700'},
+  dmserif:{name:'DM Serif', css:"'DM Serif Display',Georgia,serif", gf:'DM+Serif+Display', heavy:true},
+  libre:{name:'Libre Baskerville', css:"'Libre Baskerville',Georgia,serif", gf:'Libre+Baskerville:wght@400;700'},
+  fraunces:{name:'Fraunces', css:"'Fraunces',Georgia,serif", gf:'Fraunces:opsz,wght@9..144,500;9..144,600'},
+  dmsans:{name:'DM Sans', css:"'DM Sans',system-ui,sans-serif", gf:'DM+Sans:wght@400;500;700'},
+  worksans:{name:'Work Sans', css:"'Work Sans',system-ui,sans-serif", gf:'Work+Sans:wght@400;500;600'},
+  plex:{name:'IBM Plex Sans', css:"'IBM Plex Sans',system-ui,sans-serif", gf:'IBM+Plex+Sans:wght@400;500;600'},
+  source:{name:'Source Sans', css:"'Source Sans 3',system-ui,sans-serif", gf:'Source+Sans+3:wght@400;500;600;700'}
+};
+const TITLE_FONTS = ['inter','manrope','montserrat','sora','spacegrotesk','archivo','oswald','barlowc','bebas','playfair','cormorant','dmserif','libre','fraunces'];
+const BODY_FONTS = ['inter','manrope','dmsans','worksans','plex','source','montserrat','sora'];
+const SHAPES = [{id:'round', name:'Redondeado', r:24}, {id:'soft', name:'Esquinas suaves', r:10}, {id:'square', name:'Recto', r:0}, {id:'full', name:'Pantalla completa', r:0}];
+const SHADOWS = [{id:'none', name:'Sin sombra'}, {id:'line', name:'Borde fino'}, {id:'soft', name:'Sombra suave'}, {id:'deep', name:'Sombra profunda'}, {id:'float', name:'Flotante'}];
+const DECORS = [{id:'none', name:'Ninguno'}, {id:'bar', name:'Línea arriba'}, {id:'corners', name:'Esquinas marcadas'}, {id:'frame', name:'Marco interior'}];
+const PATTERNS = [{id:'plain', name:'Liso'}, {id:'gradient', name:'Degradado'}, {id:'dots', name:'Puntos finos'}, {id:'lines', name:'Líneas finas'}, {id:'grain', name:'Papel'}];
+const CASES = [{id:'normal', name:'Normal'}, {id:'upper', name:'MAYÚSCULAS'}];
+// Ambientes: combinaciones probadas que se ven profesionales
+const AMBIENTES = [
+  {id:'ejecutivo', name:'Blanco ejecutivo', page:'#ecebe8', card:'#ffffff', accent:'#111111', icon:'#f1f0ee', fontTitle:'inter', fontBody:'inter', shape:'soft', shadow:'soft', decor:'none', pattern:'plain', nameCase:'normal'},
+  {id:'carbon-oro', name:'Carbón y oro', page:'#0b0b0c', card:'#161617', accent:'#c9a45c', icon:'#232325', fontTitle:'cormorant', fontBody:'manrope', shape:'square', shadow:'deep', decor:'corners', pattern:'plain', nameCase:'upper'},
+  {id:'chef-negro', name:'Chef negro', page:'#e7e3dc', card:'#121212', accent:'#efe7d6', icon:'#1f1f1f', fontTitle:'oswald', fontBody:'inter', shape:'square', shadow:'float', decor:'bar', pattern:'grain', nameCase:'upper'},
+  {id:'marino', name:'Azul marino', page:'#e6eaf0', card:'#ffffff', accent:'#13233d', icon:'#eef1f6', fontTitle:'sora', fontBody:'inter', shape:'soft', shadow:'soft', decor:'bar', pattern:'gradient', nameCase:'normal'},
+  {id:'piedra', name:'Piedra', page:'#d8d1c6', card:'#f7f3ed', accent:'#2f2c28', icon:'#ebe5db', fontTitle:'dmserif', fontBody:'manrope', shape:'square', shadow:'deep', decor:'frame', pattern:'grain', nameCase:'normal'},
+  {id:'vino', name:'Vino', page:'#2a0f14', card:'#fbf7f3', accent:'#6d1a26', icon:'#f3e9e6', fontTitle:'playfair', fontBody:'inter', shape:'square', shadow:'float', decor:'corners', pattern:'plain', nameCase:'normal'},
+  {id:'bosque', name:'Verde bosque', page:'#11241c', card:'#f5f3ee', accent:'#1f4d3a', icon:'#e7ece6', fontTitle:'fraunces', fontBody:'manrope', shape:'soft', shadow:'deep', decor:'none', pattern:'dots', nameCase:'normal'},
+  {id:'grafito', name:'Grafito', page:'#0e0f11', card:'#17181b', accent:'#f3f3f5', icon:'#24262b', fontTitle:'spacegrotesk', fontBody:'inter', shape:'soft', shadow:'line', decor:'none', pattern:'lines', nameCase:'normal'},
+  {id:'minimal', name:'Minimal total', page:'#ffffff', card:'#ffffff', accent:'#1a1a1a', icon:'#f4f4f4', fontTitle:'manrope', fontBody:'manrope', shape:'full', shadow:'none', decor:'none', pattern:'plain', nameCase:'normal'},
+  {id:'jarana', name:'Jarana · andino', page:'#efe8dc', card:'#fffdf8', accent:'#cc3700', icon:'#4e204b', fontTitle:'montserrat', fontBody:'montserrat', shape:'soft', shadow:'soft', decor:'none', pattern:'dots', nameCase:'upper'}
 ];
-const ACCENTS = ['#17161c','#334155','#1f3a5f','#2563eb','#0f766e','#166534','#7c2d12','#b91c1c','#be185d','#6d28d9','#a16207','#57534e'];
+const THEME_KEYS = ['page','card','accent','icon','fontTitle','fontBody','shape','shadow','decor','pattern','nameCase'];
 const TRI_COLORS = ['#732F21','#9B6031','#1A3F54','#00B4C7','#03482C','#00A650','#B32C31','#F0652A'];
 const TRI_SVG = (() => { let d=''; for (let k=0;k<4;k++){ const x=k*50; d+=`<path d="M${x} 0h30l-15 21z" fill="${TRI_COLORS[k*2]}"/><path d="M${x+25} 21h30l-15-21z" fill="${TRI_COLORS[k*2+1]}"/>`; } return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 21">${d}</svg>`; })();
 const TRI_URL = 'data:image/svg+xml,' + encodeURIComponent(TRI_SVG);
@@ -216,14 +280,15 @@ function slugify(s){
   return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
     .replace(/&/g,' y ').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'tarjeta';
 }
+function pickTheme(id){ const a = AMBIENTES.find(x=>x.id===id) || AMBIENTES[0]; const o = {}; THEME_KEYS.forEach(k => o[k] = a[k]); return o; }
 function blankCard(name){
   return {name:name||'Nombre Apellido', title:'', company:'', bio:'', slug:slugify(name||'nombre-apellido'),
-    style:'claro', accent:'#17161c', photo:null, logo:null, credit:true, published:false,
+    style:'ejecutivo', ...pickTheme('ejecutivo'), photo:null, logo:null, credit:true, published:false,
     items: ITEMS.map(d => ({id:d.id, label:d.label, val:'', on: !!d.locked || ['call','wa','email'].includes(d.id)}))};
 }
 function jaranaExample(){
   const c = blankCard('Tu Nombre');
-  Object.assign(c, {title:'Gerente de eventos', company:'JARANA', slug:'jarana-ejemplo', style:'jarana', logo:JARANA.logo,
+  Object.assign(c, {title:'Gerente de eventos', company:'JARANA', slug:'jarana-ejemplo', style:'jarana', ...pickTheme('jarana'), logo:JARANA.logo,
     bio:'Celebra tu cumpleaños, aniversario o evento de empresa con nosotros.'});
   const v = {call:'+1 551 777 8020', wa:'', email:'info@jaranarestaurant.com', web:JARANA.web, book:JARANA.book, map:JARANA.map};
   c.items.forEach(m => { if (v[m.id] !== undefined) m.val = v[m.id]; m.on = m.id==='vcf' || ['call','email','book','web','map'].includes(m.id); });
@@ -236,7 +301,12 @@ function normalize(c){
   const ids = [...new Set([...(c.items||[]).map(m=>m.id).filter(id=>ITEMS.some(d=>d.id===id)), ...ITEMS.map(d=>d.id)])];
   out.items = ids.map(id => { const d = ITEMS.find(x=>x.id===id), m = have[id] || {};
     return {id, label: String(m.label || d.label).slice(0,40), val: m.val || '', on: d.locked ? true : !!m.on}; });
-  if (!STYLES.some(s=>s.id===out.style)) out.style = 'claro';
+  // tarjetas viejas: claro/oscuro pasan a un ambiente
+  if (c.style==='claro' && !c.page) Object.assign(out, {style:'ejecutivo'}, pickTheme('ejecutivo'), c.accent?{accent:c.accent}:{});
+  if (c.style==='oscuro' && !c.page) Object.assign(out, {style:'grafito'}, pickTheme('grafito'));
+  if (c.style==='jarana' && !c.page) Object.assign(out, pickTheme('jarana'));
+  if (!AMBIENTES.some(s=>s.id===out.style) && out.style!=='custom') out.style = 'ejecutivo';
+  if (!FONTS[out.fontTitle]) out.fontTitle = 'inter'; if (!FONTS[out.fontBody]) out.fontBody = 'inter';
   out.slug = slugify(out.slug || out.name);
   return out;
 }
@@ -304,65 +374,87 @@ function cardRuntime(){
   });
 }
 
+// ---- colores ----
+const hx = h => { h=String(h||'#000').replace('#',''); if (h.length===3) h=h.split('').map(x=>x+x).join(''); return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16)); };
+const toHex = a => '#'+a.map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
+const mixC = (a,b,k) => { const A=hx(a), B=hx(b); return toHex(A.map((v,i)=>v*(1-k)+B[i]*k)); };
+const lum = h => { const [r,g,b]=hx(h).map(v=>{v/=255; return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)}); return 0.2126*r+0.7152*g+0.0722*b; };
+const contrast = (a,b) => { const x=lum(a), y=lum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); };
+const inkOn = bg => lum(bg) > 0.42 ? '#141416' : '#f5f5f7';
+
 function pageHTML(){
-  const st = C.style, J = st==='jarana', DK = st==='oscuro';
-  const lumOf = h => { h=h.replace('#',''); const [r,g,bb]=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255); return 0.2126*r+0.7152*g+0.0722*bb; };
-  let A = J ? '#cc3700' : (C.accent || '#17161c');
-  if (DK && lumOf(A) < 0.12) A = '#f3f3f5'; // en oscuro, un acento muy oscuro no se vería
-  const P = J ? {bg:'#efe8dc', card:'#fffdf8', ink:'#1d1b1a', muted:'#6f675d', line:'#e4dacb', soft:'#f6f0e6', icon:'#4e204b', iconInk:'#fff'}
-          : DK ? {bg:'#0e0f11', card:'#17181b', ink:'#f3f3f5', muted:'#a0a0aa', line:'#2a2b31', soft:'#202127', icon:'#26272d', iconInk:'#f3f3f5'}
-               : {bg:'#f3f3f1', card:'#ffffff', ink:'#16161a', muted:'#6c6c75', line:'#ececef', soft:'#f6f6f4', icon:'#f1f1ef', iconInk:'#16161a'};
-  const accInk = (() => { const h=A.replace('#',''); const [r,g,b]=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255); return (0.2126*r+0.7152*g+0.0722*b) > 0.55 ? '#16161a' : '#ffffff'; })();
-  const font = J ? "'Montserrat',system-ui,sans-serif" : "'Inter',system-ui,-apple-system,sans-serif";
-  const fontLink = J ? 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap' : 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap';
+  const J = C.style==='jarana';
+  const card = C.card, page = C.page, dark = lum(card) < 0.3;
+  const ink = inkOn(card), muted = mixC(ink, card, dark?0.38:0.42), line = mixC(ink, card, dark?0.85:0.9);
+  let A = C.accent; if (contrast(A, card) < 1.8) A = ink;           // que el botón siempre se vea
+  const accInk = inkOn(A);
+  let icon = C.icon || mixC(ink, card, 0.94); const iconInk = contrast(inkOn(icon), icon) >= 3 ? inkOn(icon) : ink;
+  const pageInk = inkOn(page);
+  const ft = FONTS[C.fontTitle] || FONTS.inter, fb = FONTS[C.fontBody] || FONTS.inter;
+  const fontLink = 'https://fonts.googleapis.com/css2?' + [...new Set([ft.gf, fb.gf])].map(f=>'family='+f).join('&') + '&display=swap';
+  const shape = SHAPES.find(s=>s.id===C.shape) || SHAPES[0], R = shape.r, FULL = C.shape==='full';
+  const rBtn = R===0 ? 2 : Math.min(14, R);
+  const UP = C.nameCase==='upper';
+  const sh = {none:'none', line:`0 0 0 1px ${line}`, soft:`0 1px 0 ${line},0 22px 44px -28px rgba(0,0,0,.45)`, deep:'0 2px 4px rgba(0,0,0,.08),0 30px 60px -18px rgba(0,0,0,.55)', float:'0 0 0 1px rgba(0,0,0,.04),0 50px 80px -30px rgba(0,0,0,.65),0 18px 30px -18px rgba(0,0,0,.35)'}[C.shadow] || 'none';
+  const dotC = lum(page) > 0.4 ? 'rgba(0,0,0,.07)' : 'rgba(255,255,255,.07)';
+  const pat = {plain:page,
+    gradient:`radial-gradient(120% 70% at 50% 0%, ${mixC(page, lum(page)>0.4?'#ffffff':'#000000', -0)} 0%, ${mixC(page, lum(page)>0.4?'#000000':'#ffffff', 0.08)} 100%) ${page}`,
+    dots:`${page} radial-gradient(${dotC} 1px, transparent 1.3px) 0 0/14px 14px`,
+    lines:`${page} repeating-linear-gradient(135deg, ${dotC} 0 1px, transparent 1px 12px)`,
+    grain:`${page} radial-gradient(${dotC} .8px, transparent 1px) 0 0/4px 4px`}[C.pattern] || page;
   const on = C.items.filter(m => m.on && m.id!=='vcf');
   const quick = on.filter(m => ITEMS.find(d=>d.id===m.id).quick);
   const list = on.filter(m => !ITEMS.find(d=>d.id===m.id).quick);
-  const ext = m => ['call'].includes(m.id) ? '' : (m.id==='email' ? '' : ' target="_blank" rel="noopener"');
-  const icon = id => ITEMS.find(d=>d.id===id).icon;
+  const ext = m => (m.id==='call' || m.id==='email') ? '' : ' target="_blank" rel="noopener"';
+  const icn = id => ITEMS.find(d=>d.id===id).icon;
   const miss = m => !(m.val||'').trim() ? ' <em>[falta]</em>' : '';
-  const quickHTML = quick.length ? `<div class="q">${quick.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="qi">${svg(icon(m.id))}</span><span class="ql">${esc(m.label)}${miss(m)}</span></a>`).join('')}</div>` : '';
-  const listHTML = list.length ? `<div class="l">${list.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="li">${svg(icon(m.id))}</span><span class="lt">${esc(m.label)}${miss(m)}</span><span class="lc">${svg('chev')}</span></a>`).join('')}</div>` : '';
+  const quickHTML = quick.length ? `<div class="q">${quick.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="qi">${svg(icn(m.id))}</span><span class="ql">${esc(m.label)}${miss(m)}</span></a>`).join('')}</div>` : '';
+  const listHTML = list.length ? `<div class="l">${list.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="li">${svg(icn(m.id))}</span><span class="lt">${esc(m.label)}${miss(m)}</span><span class="lc">${svg('chev')}</span></a>`).join('')}</div>` : '';
   const photo = C.photo ? `<img class="ph" src="${C.photo}" alt="${esc(C.name)}">` : `<div class="ph ini">${esc((C.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</div>`;
   const logo = C.logo ? `<img class="lg" src="${C.logo}" alt="${esc(C.company||'Logo')}">` : (C.company ? `<span class="lgt">${esc(C.company)}</span>` : '<span></span>');
   const vcfLabel = (C.items.find(m=>m.id==='vcf')||{}).label || 'Guardar contacto';
-  const css = `*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:${P.bg}}
-body{font-family:${font};color:${P.ink};-webkit-font-smoothing:antialiased;padding:18px 14px 28px${J?`;background:#efe8dc radial-gradient(rgba(70,50,20,.06) 1px,transparent 1.2px) 0 0/5px 5px`:''}}
-.c{max-width:420px;margin:0 auto;background:${P.card};border-radius:${J?'6px':'24px'};overflow:hidden;box-shadow:0 1px 0 ${P.line},0 24px 48px -32px rgba(0,0,0,${DK?'.8':'.35'})}
-.hd{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;min-height:58px;${J?'background:#0d0d0f;position:relative;padding-bottom:26px':''}}
+  const hdBg = J ? '#0d0d0f' : 'transparent', hdInk = J ? '#ffffff' : muted;
+  const css = `*{box-sizing:border-box}html{min-height:100%;background:${page}}
+body{margin:0;min-height:100vh;font-family:${fb.css};color:${ink};-webkit-font-smoothing:antialiased;background:${FULL?card:pat};padding:${FULL?'0':'22px 16px 30px'}}
+.c{position:relative;max-width:${FULL?'520px':'420px'};margin:0 auto;background:${card};border-radius:${R}px;overflow:hidden;box-shadow:${FULL?'none':sh};${FULL?'min-height:100vh;':''}}
+${C.decor==='bar'?`.c::before{content:"";display:block;height:5px;background:${A}}`:''}
+${C.decor==='frame'?`.c::after{content:"";position:absolute;inset:9px;border:1px solid ${mixC(A,card,0.55)};border-radius:${Math.max(0,R-6)}px;pointer-events:none}`:''}
+${C.decor==='corners'?`.cn{position:absolute;width:22px;height:22px;border:0 solid ${A};pointer-events:none;z-index:2}.cn.a{top:10px;left:10px;border-top-width:2px;border-left-width:2px}.cn.b{top:10px;right:10px;border-top-width:2px;border-right-width:2px}.cn.c2{bottom:10px;left:10px;border-bottom-width:2px;border-left-width:2px}.cn.d{bottom:10px;right:10px;border-bottom-width:2px;border-right-width:2px}`:''}
+.hd{display:flex;justify-content:space-between;align-items:center;padding:20px 22px 14px;min-height:62px;background:${hdBg};${J?'position:relative;padding-bottom:26px':''}}
 ${J?`.hd::after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px;background:url("${TRI_URL}") repeat-x 0 0/96px 10px}`:''}
-.lg{height:${J?'30px':'26px'};width:auto;max-width:65%;object-fit:contain;display:block}
-.lgt{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:${J?'#fff':P.muted}}
-#share{width:36px;height:36px;border-radius:50%;border:1px solid ${J?'rgba(255,255,255,.25)':P.line};background:transparent;color:${J?'#fff':P.ink};display:grid;place-items:center;cursor:pointer}
+.lg{height:${J?'30px':'28px'};width:auto;max-width:62%;object-fit:contain;display:block}
+.lgt{font-family:${ft.css};font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:${hdInk}}
+#share{width:38px;height:38px;border-radius:${R===0?'2px':'50%'};border:1px solid ${J?'rgba(255,255,255,.25)':line};background:transparent;color:${J?'#fff':ink};display:grid;place-items:center;cursor:pointer}
 #share svg{width:17px;height:17px}#share.ok{background:${A};color:${accInk};border-color:${A}}
-.me{padding:${J?'22px':'6px'} 24px 4px;text-align:center}
-.ph{width:108px;height:108px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 14px;border:3px solid ${P.card};box-shadow:0 0 0 1px ${P.line}}
-.ini{display:grid;place-items:center;background:${J?'#4e204b':P.soft};color:${J?'#fff':P.muted};font-size:34px;font-weight:600}
-h1{margin:0;font-size:${J?'22px':'25px'};line-height:1.2;font-weight:${J?'600':'700'};letter-spacing:${J?'.06em':'-.01em'};${J?'text-transform:uppercase;':''}}
-.ti{margin:6px 0 0;font-size:15px;color:${P.muted}}
-.co{margin:4px 0 0;font-size:11.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:${J?'#4e204b':A === '#17161c' ? P.muted : A}}
-.bio{margin:14px auto 0;font-size:14px;line-height:1.5;color:${P.muted};max-width:320px}
-.sv{display:flex;align-items:center;justify-content:center;gap:10px;margin:20px 20px 0;background:${A};color:${accInk};text-decoration:none;font-weight:600;font-size:16px;border-radius:${J?'4px':'14px'};padding:15px;${J?'box-shadow:inset 0 0 0 2px rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.06em;font-size:14px;':''}}
+.me{padding:${J?'24px':'8px'} 26px 4px;text-align:center}
+.ph{width:118px;height:118px;border-radius:${R===0?'2px':'50%'};object-fit:cover;display:block;margin:0 auto 18px;box-shadow:0 0 0 4px ${card},0 0 0 5px ${line},0 14px 28px -16px rgba(0,0,0,.5)}
+.ini{display:grid;place-items:center;background:${icon};color:${iconInk};font-family:${ft.css};font-size:38px;font-weight:600}
+h1{margin:0;font-family:${ft.css};font-size:${ft.heavy||C.fontTitle==='oswald'||C.fontTitle==='barlowc'?'32px':UP?'24px':'28px'};line-height:1.12;font-weight:${['cormorant','playfair','libre','fraunces'].includes(C.fontTitle)?'600':ft.heavy?'400':'700'};letter-spacing:${UP?'.08em':'-.01em'};${UP?'text-transform:uppercase;':''}}
+.ti{margin:8px 0 0;font-size:15px;color:${muted};font-weight:500}
+.co{margin:6px 0 0;font-size:11.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:${contrast(A,card)>=3?A:muted}}
+.dv{width:36px;height:2px;background:${A};margin:16px auto 0;opacity:${contrast(A,card)>=3?1:.5}}
+.bio{margin:14px auto 0;font-size:14.5px;line-height:1.55;color:${muted};max-width:320px}
+.sv{display:flex;align-items:center;justify-content:center;gap:10px;margin:22px 22px 0;background:${A};color:${accInk};text-decoration:none;font-weight:600;font-size:15.5px;border-radius:${rBtn}px;padding:15px;letter-spacing:${UP?'.08em':'.01em'};${UP?'text-transform:uppercase;font-size:13.5px;':''}${J?'box-shadow:inset 0 0 0 2px rgba(255,255,255,.5);':''}}
 .sv svg{width:19px;height:19px}
-.q{display:flex;justify-content:center;gap:22px;padding:20px 16px 4px}
-.q a{display:grid;justify-items:center;gap:6px;text-decoration:none;color:${P.ink};font-size:12.5px;font-weight:500;min-width:56px}
-.qi{width:52px;height:52px;border-radius:50%;background:${J?'#4e204b':P.soft};color:${J?'#fff':P.ink};display:grid;place-items:center;border:1px solid ${J?'#4e204b':P.line}}
+.q{display:flex;justify-content:center;gap:24px;padding:22px 16px 4px}
+.q a{display:grid;justify-items:center;gap:7px;text-decoration:none;color:${ink};font-size:12.5px;font-weight:500;min-width:56px}
+.qi{width:52px;height:52px;border-radius:${R===0?'2px':'50%'};background:${icon};color:${iconInk};display:grid;place-items:center;border:1px solid ${line}}
 .qi svg{width:21px;height:21px}
-.l{margin:18px 20px 0;border-top:1px solid ${P.line}}
-.l a{display:flex;align-items:center;gap:14px;padding:14px 2px;border-bottom:1px solid ${P.line};text-decoration:none;color:${P.ink};font-size:15px;font-weight:500}
-.li{width:34px;height:34px;border-radius:${J?'4px':'10px'};background:${P.icon};color:${P.iconInk};display:grid;place-items:center;flex:none}.li svg{width:17px;height:17px}
-.lt{flex:1}.lc{color:${P.muted};display:grid}.lc svg{width:18px;height:18px}
-em{font-style:normal;font-size:11px;color:#c2410c}
-.ft{padding:22px 20px 22px;text-align:center}
+.l{margin:20px 22px 0;border-top:1px solid ${line}}
+.l a{display:flex;align-items:center;gap:14px;padding:15px 2px;border-bottom:1px solid ${line};text-decoration:none;color:${ink};font-size:15px;font-weight:500}
+.li{width:34px;height:34px;border-radius:${R===0?'2px':R<=10?'6px':'10px'};background:${icon};color:${iconInk};display:grid;place-items:center;flex:none}.li svg{width:17px;height:17px}
+.lt{flex:1}.lc{color:${muted};display:grid}.lc svg{width:18px;height:18px}
+em{font-style:normal;font-size:11px;color:#e0622a}
+.ft{padding:24px 20px 26px;text-align:center}
 ${J?`.ft::before{content:"";display:block;width:120px;height:7px;margin:0 auto 14px;background:url("${TRI_URL}") repeat-x 0 0/67px 7px}`:''}
-.ft a{font-size:11px;color:${P.muted};text-decoration:none;letter-spacing:.04em}
-.ft:empty{padding:10px}`;
-  const body = `<main class="c"><div class="hd">${logo}<button id="share" type="button" aria-label="Compartir esta tarjeta">${svg('share')}</button></div>
-<div class="me">${photo}<h1>${esc(C.name)}</h1>${C.title?`<p class="ti">${esc(C.title)}</p>`:''}${C.company?`<p class="co">${esc(C.company)}</p>`:''}${C.bio?`<p class="bio">${esc(C.bio)}</p>`:''}</div>
+.ft a{font-size:11px;color:${muted};text-decoration:none;letter-spacing:.04em}`;
+  const corners = C.decor==='corners' ? '<i class="cn a"></i><i class="cn b"></i><i class="cn c2"></i><i class="cn d"></i>' : '';
+  const body = `<main class="c">${corners}<div class="hd">${logo}<button id="share" type="button" aria-label="Compartir esta tarjeta">${svg('share')}</button></div>
+<div class="me">${photo}<h1>${esc(C.name)}</h1>${C.title?`<p class="ti">${esc(C.title)}</p>`:''}${C.company?`<p class="co">${esc(C.company)}</p>`:''}${C.bio?`<div class="dv"></div><p class="bio">${esc(C.bio)}</p>`:''}</div>
 <a class="sv" id="save" href="#" data-b="vcf">${svg('card')}${esc(vcfLabel)}</a>${quickHTML}${listHTML}
 <div class="ft">${C.credit?'<a href="https://maemmuki.github.io/webs.b/maemuki/" target="_blank" rel="noopener">Tarjeta digital por Maemuki</a>':''}</div></main>`;
   const desc = [C.title, C.company].filter(Boolean).join(' · ');
-  return `<!doctype html>\n<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(C.name)}${C.company?' · '+esc(C.company):''}</title><meta name="description" content="${esc(desc)}"><meta property="og:title" content="${esc(C.name)}"><meta property="og:description" content="${esc(desc)}"><meta name="theme-color" content="${J?'#0d0d0f':P.bg}"><meta name="robots" content="noindex"><link rel="stylesheet" href="${fontLink}"><style>${css}</style></head><body>${body}<script type="application/json" id="maemuki-card">${publicData()}<\/script><script>(${cardRuntime.toString()})()<\/script></body></html>`;
+  return `<!doctype html>\n<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(C.name)}${C.company?' · '+esc(C.company):''}</title><meta name="description" content="${esc(desc)}"><meta property="og:title" content="${esc(C.name)}"><meta property="og:description" content="${esc(desc)}"><meta name="theme-color" content="${FULL?card:page}"><meta name="robots" content="noindex"><link rel="stylesheet" href="${fontLink}"><style>${css}</style></head><body>${body}<script type="application/json" id="maemuki-card">${publicData()}<\/script><script>(${cardRuntime.toString()})()<\/script></body></html>`;
 }
 
 // ===== UI =====
@@ -370,14 +462,28 @@ function renderSelect(){
   const keys = Object.keys(DB.cards).sort((a,b)=>DB.cards[a].name.localeCompare(DB.cards[b].name));
   $('cardSelect').innerHTML = keys.map(k => `<option value="${esc(k)}"${k===DB.current?' selected':''}>${esc(DB.cards[k].name)}${DB.cards[k].company?' · '+esc(DB.cards[k].company):''}</option>`).join('');
 }
+function chipRow(el, list, key, labelFn){
+  $(el).innerHTML = list.map(x => `<button type="button" class="chip${labelFn?' font':''}" data-k="${key}" data-val="${x.id||x}" aria-pressed="${(x.id||x)===C[key]}"${labelFn?` style="font-family:${labelFn(x).replace(/"/g,'&quot;')}"`:''}>${x.name||FONTS[x].name}</button>`).join('');
+}
 function renderStyle(){
-  $('styleChips').innerHTML = STYLES.map(s => `<button type="button" class="chip" data-val="${s.id}" aria-pressed="${s.id===C.style}"><span class="dot" style="background:${s.dot}"></span>${s.name}</button>`).join('');
-  $('accentBox').hidden = C.style==='jarana';
-  $('swatches').innerHTML = ACCENTS.map(c => `<button type="button" class="sw" style="background:${c}" data-c="${c}" aria-label="Color ${c}" aria-pressed="${c===C.accent}"></button>`).join('') + `<label>Otro<input type="color" id="accentPick" value="${C.accent}"></label>`;
+  $('ambChips').innerHTML = AMBIENTES.map(a => `<button type="button" data-amb="${a.id}" aria-pressed="${a.id===C.style}"><div class="sw2" style="background:${a.page}"><i style="background:${a.card};border-radius:${(SHAPES.find(s=>s.id===a.shape)||{}).r>10?'7px':a.shape==='soft'?'3px':'0'}"></i><b style="background:${a.accent}"></b></div><span>${a.name}</span></button>`).join('')
+    + `<button type="button" data-amb="custom" aria-pressed="${C.style==='custom'}"><div class="sw2" style="background:repeating-linear-gradient(45deg,#eee 0 6px,#fff 6px 12px)"><i style="background:${C.card}"></i><b style="background:${C.accent}"></b></div><span>Mi combinación</span></button>`;
+  const J = C.style==='jarana';
+  $('customBox').hidden = J;
+  $('cPage').value = C.page; $('cCard').value = C.card; $('cAccent').value = C.accent; $('cIcon').value = C.icon || '#f1f0ee';
+  chipRow('fontTitleChips', TITLE_FONTS, 'fontTitle', id => FONTS[id].css);
+  chipRow('fontBodyChips', BODY_FONTS, 'fontBody', id => FONTS[id].css);
+  chipRow('caseChips', CASES, 'nameCase');
+  chipRow('shapeChips', SHAPES, 'shape');
+  chipRow('shadowChips', SHADOWS, 'shadow');
+  chipRow('decorChips', DECORS, 'decor');
+  chipRow('patternChips', PATTERNS, 'pattern');
   $('logoThumb').innerHTML = C.logo ? `<img src="${C.logo}" alt="">` : 'Sin logo'; $('logoRemove').hidden = !C.logo;
   $('photoThumb').innerHTML = C.photo ? `<img src="${C.photo}" alt="">` : 'Sin foto'; $('photoRemove').hidden = !C.photo;
   $('fCredit').checked = !!C.credit;
 }
+// Cargar las letras en el editor para que los botones se vean con su letra
+(function(){ const l=document.createElement('link'); l.rel='stylesheet'; l.href='https://fonts.googleapis.com/css2?'+Object.values(FONTS).map(f=>'family='+f.gf).join('&')+'&display=swap'; document.head.appendChild(l); })();
 function renderItems(){
   const onList = C.items.map((m,i)=>({m,i})).filter(x=>x.m.on);
   $('items').innerHTML = C.items.map((m,i) => { const d = ITEMS.find(x=>x.id===m.id); const k = onList.findIndex(x=>x.i===i);
@@ -411,7 +517,7 @@ document.addEventListener('input', e => {
   else if (t.id==='fTitle') C.title=t.value;
   else if (t.id==='fCompany') { C.company=t.value; renderSelect(); }
   else if (t.id==='fBio') C.bio=t.value;
-  else if (t.id==='accentPick') { C.accent=t.value; }
+  else if (['cPage','cCard','cAccent','cIcon'].includes(t.id)) { C[{cPage:'page',cCard:'card',cAccent:'accent',cIcon:'icon'}[t.id]] = t.value; if (C.style!=='custom') { C.style='custom'; $('ambChips').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.amb==='custom')); } }
   else if (t.dataset.k) { const m=C.items[+t.dataset.i]; m[t.dataset.k]=t.value; if (t.dataset.k==='label') { const nm=t.closest('.item').querySelector('.nm'); if (nm&&nm.firstChild) nm.firstChild.textContent=t.value||' '; } }
   else if (t.id==='ghUser') { GH.user=t.value.trim(); saveGH(); }
   else if (t.id==='ghRepo') { GH.repo=t.value.trim(); saveGH(); }
@@ -434,11 +540,13 @@ document.addEventListener('click', e => {
   const mv = e.target.closest('.mv');
   if (mv && !mv.disabled) { const i=+mv.dataset.i, dir=+mv.dataset.mv; let j=i+dir; while (j>0 && j<C.items.length && !C.items[j].on) j+=dir;
     if (j>0 && j<C.items.length) { const [m]=C.items.splice(i,1); C.items.splice(j,0,m); renderItems(); renderAll(); } return; }
-  const ch = e.target.closest('#styleChips .chip'); if (ch) { C.style = ch.dataset.val; renderStyle(); renderAll(); return; }
-  const sw = e.target.closest('.sw'); if (sw) { C.accent = sw.dataset.c; renderStyle(); renderAll(); }
+  const am = e.target.closest('[data-amb]');
+  if (am) { const id = am.dataset.amb; if (id!=='custom') Object.assign(C, pickTheme(id)); C.style = id; renderStyle(); renderAll(); return; }
+  const ch = e.target.closest('.chip[data-k]');
+  if (ch) { C[ch.dataset.k] = ch.dataset.val; if (!['shape','shadow','decor','pattern'].includes(ch.dataset.k) && C.style!=='jarana') C.style='custom'; renderStyle(); renderAll(); }
 });
 $('fillJarana').addEventListener('click', () => {
-  C.style='jarana'; C.company = C.company || JARANA.company; C.logo = JARANA.logo;
+  C.style='jarana'; Object.assign(C, pickTheme('jarana')); C.company = C.company || JARANA.company; C.logo = JARANA.logo;
   const set = {web:JARANA.web, book:JARANA.book, map:JARANA.map};
   C.items.forEach(m => { if (set[m.id] && !m.val) { m.val = set[m.id]; m.on = true; } });
   $('fCompany').value = C.company; renderStyle(); renderItems(); renderAll(); renderSelect();
@@ -454,7 +562,7 @@ function readImage(file, max, type, cb){
     x.drawImage(img,sx,sy,sw,sh,0,0,w,h); cb(cv.toDataURL(type, .86)); }; img.src = r.result; };
   r.readAsDataURL(file);
 }
-$('photoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 320, 'image/jpeg', d => { C.photo=d; renderStyle(); renderAll(); }); e.target.value=''; });
+$('photoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 480, 'image/jpeg', d => { C.photo=d; renderStyle(); renderAll(); }); e.target.value=''; });
 $('logoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 400, 'image/png', d => { C.logo=d; renderStyle(); renderAll(); }); e.target.value=''; });
 $('photoRemove').addEventListener('click', () => { C.photo=null; renderStyle(); renderAll(); });
 $('logoRemove').addEventListener('click', () => { C.logo=null; renderStyle(); renderAll(); });
