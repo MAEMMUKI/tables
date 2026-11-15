@@ -487,11 +487,11 @@ ${LP==='centro'?'.hd{justify-content:center;position:relative}.hd #share{positio
 .lgt{font-family:${ft.css};font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:${hdInk}}
 #share{width:38px;height:38px;border-radius:${R===0?'2px':'50%'};border:1px solid ${J?'rgba(255,255,255,.25)':line};background:transparent;color:${J?'#fff':ink};display:grid;place-items:center;cursor:pointer}
 #share svg{width:17px;height:17px}#share.ok{background:${A};color:${accInk};border-color:${A}}
-.me{padding:${J?'24px':(C.photoMode==='sin'?'22px':'8px')} 26px 4px;text-align:center}
+.me{padding:${J?'24px':(C.photoMode==='sin' && LP!=='nombre' ? '10px' : '8px')} 22px 4px;text-align:center}
 .ph{width:118px;height:118px;border-radius:${R===0?'2px':'50%'};object-fit:cover;display:block;margin:0 auto 18px;box-shadow:0 0 0 4px ${card},0 0 0 5px ${line},0 14px 28px -16px rgba(0,0,0,.5)}
 .phw{overflow:hidden}.phw img{width:100%;height:100%;object-fit:cover;display:block}
 .ini{display:grid;place-items:center;background:${icon};color:${iconInk};font-family:${ft.css};font-size:38px;font-weight:600}
-h1{margin:0;font-family:${ft.css};font-size:${ft.heavy||C.fontTitle==='oswald'||C.fontTitle==='barlowc'?'32px':UP?'24px':'28px'};line-height:1.12;font-weight:${['cormorant','playfair','libre','fraunces'].includes(C.fontTitle)?'600':ft.heavy?'400':'700'};letter-spacing:${UP?'.08em':'-.01em'};${UP?'text-transform:uppercase;':''}}
+h1{margin:0;font-family:${ft.css};font-size:${ft.heavy||C.fontTitle==='oswald'||C.fontTitle==='barlowc'?'min(32px,9vw)':UP?'min(24px,6.6vw)':'min(28px,7.6vw)'};text-wrap:balance;line-height:1.12;font-weight:${['cormorant','playfair','libre','fraunces'].includes(C.fontTitle)?'600':ft.heavy?'400':'700'};letter-spacing:${UP?'.05em':'-.01em'};${UP?'text-transform:uppercase;':''}}
 .me h1{${MT ? (MT.light ? 'text-shadow:0 1px 0 rgba(255,255,255,.55),0 -1px 0 rgba(0,0,0,.18);' : 'text-shadow:0 1px 0 rgba(0,0,0,.7),0 -1px 0 rgba(255,255,255,.08);') : ''}}
 .ti{margin:8px 0 0;font-size:15px;color:${muted};font-weight:500}
 .co{margin:6px 0 0;font-size:11.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:${contrast(A,card)>=3?A:muted}}
@@ -660,7 +660,7 @@ function readImage(file, max, type, cb){
 }
 $('photoReset').addEventListener('click', () => { C.photoZoom=1; C.photoX=50; C.photoY=50; renderStyle(); renderAll(); });
 $('photoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 640, 'image/jpeg', d => { C.photo=d; C.photoMode='con'; C.photoZoom=1; C.photoX=50; C.photoY=50; renderStyle(); renderAll(); }); e.target.value=''; });
-$('logoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 500, 'image/png', d => { C.logo=d; if (!C.logoSize || C.logoSize===28) C.logoSize = 40; renderStyle(); renderAll(); }); e.target.value=''; });
+$('logoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 500, 'image/png', d => { C.logo=d; const im=new Image(); im.onload=()=>{ const ar=im.width/im.height; if (ar < 1.7) { C.logoPos='nombre'; C.logoSize=72; } else { C.logoPos='izq'; C.logoSize=34; } renderStyle(); renderAll(); }; im.src=d; renderStyle(); renderAll(); }); e.target.value=''; });
 $('photoRemove').addEventListener('click', () => { C.photo=null; renderStyle(); renderAll(); });
 $('logoRemove').addEventListener('click', () => { C.logo=null; renderStyle(); renderAll(); });
 $('cardSelect').addEventListener('change', e => { DB.current=e.target.value; save(); load(); });
