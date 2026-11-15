@@ -115,6 +115,7 @@ details.help{font-size:14px;color:var(--muted)}details.help summary{cursor:point
           <label class="upload">Subir foto<input type="file" id="photoFile" accept="image/*"></label>
           <button type="button" class="btn ghost sm" id="photoRemove" hidden>Quitar</button>
         </div>
+        <div><span class="label">Foto en la tarjeta</span><div class="chips" id="photoModeChips"></div></div>
         <div class="fields">
           <label class="f">Nombre y apellido<input type="text" id="fName" maxlength="60"></label>
           <label class="f">Cargo<input type="text" id="fTitle" maxlength="60" placeholder="Ej. Gerente de eventos"></label>
@@ -261,6 +262,7 @@ const SHADOWS = [{id:'none', name:'Sin sombra'}, {id:'line', name:'Borde fino'},
 const DECORS = [{id:'none', name:'Ninguno'}, {id:'bar', name:'Línea arriba'}, {id:'corners', name:'Esquinas marcadas'}, {id:'frame', name:'Marco interior'}];
 const PATTERNS = [{id:'plain', name:'Liso'}, {id:'gradient', name:'Degradado'}, {id:'dots', name:'Puntos finos'}, {id:'lines', name:'Líneas finas'}, {id:'grain', name:'Papel'}];
 const CASES = [{id:'normal', name:'Normal'}, {id:'upper', name:'MAYÚSCULAS'}];
+const PHOTO_MODES = [{id:'con', name:'Con foto'}, {id:'sin', name:'Sin foto'}];
 // Ambientes: combinaciones probadas que se ven profesionales
 const AMBIENTES = [
   {id:'ejecutivo', name:'Blanco ejecutivo', page:'#ecebe8', card:'#ffffff', accent:'#111111', icon:'#f1f0ee', fontTitle:'inter', fontBody:'inter', shape:'soft', shadow:'soft', decor:'none', pattern:'plain', nameCase:'normal'},
@@ -294,7 +296,7 @@ function slugify(s){
 function pickTheme(id){ const a = AMBIENTES.find(x=>x.id===id) || AMBIENTES[0]; const o = {}; THEME_KEYS.forEach(k => o[k] = a[k]); return o; }
 function blankCard(name){
   return {name:name||'Nombre Apellido', title:'', company:'', bio:'', slug:slugify(name||'nombre-apellido'),
-    style:'ejecutivo', ...pickTheme('ejecutivo'), photo:null, logo:null, credit:true, published:false,
+    style:'ejecutivo', ...pickTheme('ejecutivo'), photo:null, photoMode:'con', logo:null, credit:true, published:false,
     items: ITEMS.map(d => ({id:d.id, label:d.label, val:'', on: !!d.locked || ['call','wa','email'].includes(d.id)}))};
 }
 function jaranaExample(){
@@ -317,6 +319,7 @@ function normalize(c){
   if (c.style==='oscuro' && !c.page) Object.assign(out, {style:'grafito'}, pickTheme('grafito'));
   if (c.style==='jarana' && !c.page) Object.assign(out, pickTheme('jarana'));
   if (!AMBIENTES.some(s=>s.id===out.style) && out.style!=='custom') out.style = 'ejecutivo';
+  if (out.photoMode!=='sin') out.photoMode = 'con';
   if (!FONTS[out.fontTitle]) out.fontTitle = 'inter'; if (!FONTS[out.fontBody]) out.fontBody = 'inter';
   out.slug = slugify(out.slug || out.name);
   return out;
@@ -372,7 +375,7 @@ function cardRuntime(){
     var li = val('linkedin'); if (li) L.push('URL;TYPE=LinkedIn:'+li);
     if (adr) L.push('ADR;TYPE=WORK:;;'+e(adr)+';;;;');
     L.push('URL;TYPE=Tarjeta:'+location.href.split('#')[0]);
-    if (D.photo && /^data:image\/jpeg;base64,/.test(D.photo)) L.push('PHOTO;ENCODING=b;TYPE=JPEG:'+D.photo.split(',')[1]);
+    if (D.photoMode!=='sin' && D.photo && /^data:image\/jpeg;base64,/.test(D.photo)) L.push('PHOTO;ENCODING=b;TYPE=JPEG:'+D.photo.split(',')[1]);
     L.push('END:VCARD');
     var blob = new Blob([L.join('\r\n')], {type:'text/vcard;charset=utf-8'});
     var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -423,7 +426,7 @@ function pageHTML(){
   const miss = m => !(m.val||'').trim() ? ' <em>[falta]</em>' : '';
   const quickHTML = quick.length ? `<div class="q">${quick.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="qi">${svg(icn(m.id))}</span><span class="ql">${esc(m.label)}${miss(m)}</span></a>`).join('')}</div>` : '';
   const listHTML = list.length ? `<div class="l">${list.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="li">${svg(icn(m.id))}</span><span class="lt">${esc(m.label)}${miss(m)}</span><span class="lc">${svg('chev')}</span></a>`).join('')}</div>` : '';
-  const photo = C.photo ? `<img class="ph" src="${C.photo}" alt="${esc(C.name)}">` : `<div class="ph ini">${esc((C.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</div>`;
+  const photo = C.photoMode==='sin' ? '' : C.photo ? `<img class="ph" src="${C.photo}" alt="${esc(C.name)}">` : `<div class="ph ini">${esc((C.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</div>`;
   const logo = C.logo ? `<img class="lg" src="${C.logo}" alt="${esc(C.company||'Logo')}">` : (C.company ? `<span class="lgt">${esc(C.company)}</span>` : '<span></span>');
   const vcfLabel = (C.items.find(m=>m.id==='vcf')||{}).label || 'Guardar contacto';
   const hdBg = J ? '#0d0d0f' : 'transparent', hdInk = J ? '#ffffff' : muted;
@@ -439,7 +442,7 @@ ${J?`.hd::after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px
 .lgt{font-family:${ft.css};font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:${hdInk}}
 #share{width:38px;height:38px;border-radius:${R===0?'2px':'50%'};border:1px solid ${J?'rgba(255,255,255,.25)':line};background:transparent;color:${J?'#fff':ink};display:grid;place-items:center;cursor:pointer}
 #share svg{width:17px;height:17px}#share.ok{background:${A};color:${accInk};border-color:${A}}
-.me{padding:${J?'24px':'8px'} 26px 4px;text-align:center}
+.me{padding:${J?'24px':(C.photoMode==='sin'?'22px':'8px')} 26px 4px;text-align:center}
 .ph{width:118px;height:118px;border-radius:${R===0?'2px':'50%'};object-fit:cover;display:block;margin:0 auto 18px;box-shadow:0 0 0 4px ${card},0 0 0 5px ${line},0 14px 28px -16px rgba(0,0,0,.5)}
 .ini{display:grid;place-items:center;background:${icon};color:${iconInk};font-family:${ft.css};font-size:38px;font-weight:600}
 h1{margin:0;font-family:${ft.css};font-size:${ft.heavy||C.fontTitle==='oswald'||C.fontTitle==='barlowc'?'32px':UP?'24px':'28px'};line-height:1.12;font-weight:${['cormorant','playfair','libre','fraunces'].includes(C.fontTitle)?'600':ft.heavy?'400':'700'};letter-spacing:${UP?'.08em':'-.01em'};${UP?'text-transform:uppercase;':''}}
@@ -487,12 +490,13 @@ function renderStyle(){
   chipRow('fontTitleChips', TITLE_FONTS, 'fontTitle', id => FONTS[id].css);
   chipRow('fontBodyChips', BODY_FONTS, 'fontBody', id => FONTS[id].css);
   chipRow('caseChips', CASES, 'nameCase');
+  chipRow('photoModeChips', PHOTO_MODES, 'photoMode');
   chipRow('shapeChips', SHAPES, 'shape');
   chipRow('shadowChips', SHADOWS, 'shadow');
   chipRow('decorChips', DECORS, 'decor');
   chipRow('patternChips', PATTERNS, 'pattern');
   $('logoThumb').innerHTML = C.logo ? `<img src="${C.logo}" alt="">` : 'Sin logo'; $('logoRemove').hidden = !C.logo;
-  $('photoThumb').innerHTML = C.photo ? `<img src="${C.photo}" alt="">` : 'Sin foto'; $('photoRemove').hidden = !C.photo;
+  $('photoThumb').innerHTML = C.photo ? `<img src="${C.photo}" alt="">` : (C.photoMode==='sin' ? 'Sin foto' : 'Iniciales'); $('photoThumb').style.opacity = C.photoMode==='sin' ? .45 : 1; $('photoRemove').hidden = !C.photo;
   $('fCredit').checked = !!C.credit;
 }
 // Cargar las letras en el editor para que los botones se vean con su letra
@@ -561,7 +565,7 @@ document.addEventListener('click', e => {
   const am = e.target.closest('[data-amb]');
   if (am) { const id = am.dataset.amb; if (id!=='custom') Object.assign(C, pickTheme(id)); C.style = id; renderStyle(); renderAll(); return; }
   const ch = e.target.closest('.chip[data-k]');
-  if (ch) { C[ch.dataset.k] = ch.dataset.val; if (!['shape','shadow','decor','pattern'].includes(ch.dataset.k) && C.style!=='jarana') C.style='custom'; renderStyle(); renderAll(); }
+  if (ch) { C[ch.dataset.k] = ch.dataset.val; if (!['shape','shadow','decor','pattern','photoMode'].includes(ch.dataset.k) && C.style!=='jarana') C.style='custom'; renderStyle(); renderAll(); }
 });
 $('fillJarana').addEventListener('click', () => {
   C.style='jarana'; Object.assign(C, pickTheme('jarana')); C.company = C.company || JARANA.company; C.logo = JARANA.logo;
@@ -580,7 +584,7 @@ function readImage(file, max, type, cb){
     x.drawImage(img,sx,sy,sw,sh,0,0,w,h); cb(cv.toDataURL(type, .86)); }; img.src = r.result; };
   r.readAsDataURL(file);
 }
-$('photoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 480, 'image/jpeg', d => { C.photo=d; renderStyle(); renderAll(); }); e.target.value=''; });
+$('photoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 480, 'image/jpeg', d => { C.photo=d; C.photoMode='con'; renderStyle(); renderAll(); }); e.target.value=''; });
 $('logoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 400, 'image/png', d => { C.logo=d; renderStyle(); renderAll(); }); e.target.value=''; });
 $('photoRemove').addEventListener('click', () => { C.photo=null; renderStyle(); renderAll(); });
 $('logoRemove').addEventListener('click', () => { C.logo=null; renderStyle(); renderAll(); });
