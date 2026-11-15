@@ -132,6 +132,11 @@ details.help{font-size:14px;color:var(--muted)}details.help summary{cursor:point
           <label class="f">Dirección del link <small id="slugHint"></small><input type="text" id="fSlug" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
         </div>
         <label class="f">Frase corta <small>opcional · máximo una línea</small><input type="text" id="fBio" maxlength="110" placeholder="Ej. Organizo tu cumpleaños, aniversario o evento de empresa."></label>
+        <div><span class="label">Idiomas de la tarjeta</span><div class="chips" id="langChips" style="margin-top:6px"></div></div>
+        <div class="fields" id="enFields">
+          <label class="f">Cargo en inglés <small>si lo dejas vacío, sale el de arriba</small><input type="text" id="fTitleEn" maxlength="60" placeholder="Ex. Events Manager"></label>
+          <label class="f">Frase en inglés <small>opcional</small><input type="text" id="fBioEn" maxlength="110" placeholder="Ex. Let's celebrate your next event together."></label>
+        </div>
         <div><span class="label">Logo de la empresa · opcional · sale arriba a la izquierda</span>
         <div class="img-row" style="margin-top:8px">
           <div class="thumb logo" id="logoThumb">Sin logo</div>
@@ -253,6 +258,8 @@ const ITEMS = [
   {id:'c1', label:'Otro link', hint:'Botón libre · título editable', icon:'link', kind:'link', ph:'https://...'},
   {id:'c2', label:'Otro link', hint:'Botón libre · título editable', icon:'link', kind:'link', ph:'https://...'}
 ];
+const EN_LABELS = {vcf:'Save contact', call:'Call', wa:'WhatsApp', email:'Email', web:'Website', linkedin:'LinkedIn', ig:'Instagram', book:'Book', map:'Directions', review:'Leave a review', c1:'Link', c2:'Link'};
+const LANGS = [{id:'es', name:'Solo español'}, {id:'en', name:'Solo inglés'}, {id:'ambos', name:'Español + inglés (botón ES | EN)'}];
 // Letras profesionales (Google Fonts)
 const FONTS = {
   inter:{name:'Inter', css:"'Inter',system-ui,sans-serif", gf:'Inter:wght@400;500;600;700'},
@@ -328,7 +335,7 @@ function slugify(s){
 function pickTheme(id){ const a = AMBIENTES.find(x=>x.id===id) || AMBIENTES[0]; const o = {}; THEME_KEYS.forEach(k => o[k] = a[k]); o.finish = a.finish || 'liso'; return o; }
 function blankCard(name){
   return {name:name||'Nombre Apellido', title:'', company:'', bio:'', slug:slugify(name||'nombre-apellido'),
-    style:'ejecutivo', ...pickTheme('ejecutivo'), photo:null, photoMode:'con', logo:null, credit:true, published:false,
+    style:'ejecutivo', ...pickTheme('ejecutivo'), photo:null, photoMode:'con', logo:null, credit:true, published:false, lang:'ambos', titleEn:'', bioEn:'',
     items: ITEMS.map(d => ({id:d.id, label:d.label, val:'', on: !!d.locked || ['call','wa','email'].includes(d.id)}))};
 }
 function jaranaExample(){
@@ -345,7 +352,8 @@ function normalize(c){
   const have = Object.fromEntries((c.items||[]).map(m => [m.id, m]));
   const ids = [...new Set([...(c.items||[]).map(m=>m.id).filter(id=>ITEMS.some(d=>d.id===id)), ...ITEMS.map(d=>d.id)])];
   out.items = ids.map(id => { const d = ITEMS.find(x=>x.id===id), m = have[id] || {};
-    return {id, label: String(m.label || d.label).slice(0,40), val: m.val || '', on: d.locked ? true : !!m.on}; });
+    return {id, label: String(m.label || d.label).slice(0,40), labelEn: String(m.labelEn || '').slice(0,40), val: m.val || '', on: d.locked ? true : !!m.on}; });
+  if (!LANGS.some(x=>x.id===c.lang)) out.lang = 'es'; // tarjetas viejas siguen en español
   // tarjetas viejas: claro/oscuro pasan a un ambiente
   if (c.style==='claro' && !c.page) Object.assign(out, {style:'ejecutivo'}, pickTheme('ejecutivo'), c.accent?{accent:c.accent}:{});
   if (c.style==='oscuro' && !c.page) Object.assign(out, {style:'grafito'}, pickTheme('grafito'));
@@ -405,7 +413,7 @@ function cardRuntime(){
     var parts = (D.name||'').trim().split(/\s+/), last = parts.length>1 ? parts.pop() : '', first = parts.join(' ');
     var L = ['BEGIN:VCARD','VERSION:3.0','N:'+e(last)+';'+e(first)+';;;','FN:'+e(D.name)];
     if (D.company) L.push('ORG:'+e(D.company));
-    if (D.title) L.push('TITLE:'+e(D.title));
+    var ttl = (lang==='en' && D.titleEn) ? D.titleEn : (D.title || D.titleEn); if (ttl) L.push('TITLE:'+e(ttl));
     var tel = val('call'), wa = val('wa'), mail = val('email'), web = val('web'), adr = val('map');
     if (tel) L.push('TEL;TYPE=CELL,VOICE:'+tel.replace(/[^\d+]/g,''));
     if (wa && wa.replace(/\D/g,'') !== tel.replace(/\D/g,'')) L.push('TEL;TYPE=WHATSAPP:+'+wa.replace(/\D/g,''));
@@ -421,6 +429,17 @@ function cardRuntime(){
     a.download = (D.name||'contacto').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-') + '.vcf';
     document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 3000);
   });
+  // Idioma: ES | EN (recuerda la elección; si no, usa el idioma del celular)
+  var lang = D.lang==='en' ? 'en' : 'es';
+  if (D.lang==='ambos') {
+    var saved = null; try { saved = localStorage.getItem('mkLang'); } catch(x) {}
+    lang = saved === 'es' || saved === 'en' ? saved : ((navigator.language||'').toLowerCase().indexOf('es')===0 ? 'es' : 'en');
+    var setL = function(l){ lang = l; document.documentElement.lang = l;
+      [].forEach.call(document.querySelectorAll('[data-es]'), function(n){ n.textContent = n.getAttribute('data-'+l); });
+      [].forEach.call(document.querySelectorAll('.lb'), function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-l')===l ? 'true' : 'false'); }); };
+    [].forEach.call(document.querySelectorAll('.lb'), function(b){ b.addEventListener('click', function(){ setL(b.getAttribute('data-l')); try { localStorage.setItem('mkLang', lang); } catch(x) {} }); });
+    setL(lang);
+  }
   var sh = document.getElementById('share');
   if (sh) sh.addEventListener('click', function(){
     var u = location.href.split('#')[0];
@@ -437,6 +456,14 @@ const lum = h => { const [r,g,b]=hx(h).map(v=>{v/=255; return v<=0.03928?v/12.92
 const contrast = (a,b) => { const x=lum(a), y=lum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); };
 const inkOn = bg => lum(bg) > 0.42 ? '#141416' : '#f5f5f7';
 
+function enLabel(m){ return (m.labelEn||'').trim() || (m.label === (ITEMS.find(d=>d.id===m.id)||{}).label ? EN_LABELS[m.id] : m.label) || m.label; }
+// Texto bilingüe: en "ambos" el botón ES | EN cambia el texto en la tarjeta
+function TX(es, en){
+  en = (en||'').trim() || es;
+  if (C.lang==='en') return esc(en);
+  if (C.lang==='ambos' && en !== es) return `<span data-es="${esc(es)}" data-en="${esc(en)}">${esc(es)}</span>`;
+  return esc(es);
+}
 function pageHTML(){
   const J = C.style==='jarana';
   const MT = METALS[C.finish];
@@ -465,14 +492,14 @@ function pageHTML(){
   const ext = m => (m.id==='call' || m.id==='email') ? '' : ' target="_blank" rel="noopener"';
   const icn = id => ITEMS.find(d=>d.id===id).icon;
   const miss = m => !(m.val||'').trim() ? ' <em>[falta]</em>' : '';
-  const quickHTML = quick.length ? `<div class="q">${quick.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="qi">${svg(icn(m.id))}</span><span class="ql">${esc(m.label)}${miss(m)}</span></a>`).join('')}</div>` : '';
-  const listHTML = list.length ? `<div class="l">${list.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="li">${svg(icn(m.id))}</span><span class="lt">${esc(m.label)}${miss(m)}</span><span class="lc">${svg('chev')}</span></a>`).join('')}</div>` : '';
+  const quickHTML = quick.length ? `<div class="q">${quick.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="qi">${svg(icn(m.id))}</span><span class="ql">${TX(m.label, enLabel(m))}${miss(m)}</span></a>`).join('')}</div>` : '';
+  const listHTML = list.length ? `<div class="l">${list.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="li">${svg(icn(m.id))}</span><span class="lt">${TX(m.label, enLabel(m))}${miss(m)}</span><span class="lc">${svg('chev')}</span></a>`).join('')}</div>` : '';
   const photo = C.photoMode==='sin' ? '' : C.photo ? `<div class="ph phw"><img src="${C.photo}" alt="${esc(C.name)}" style="object-position:${C.photoX}% ${C.photoY}%;transform-origin:${C.photoX}% ${C.photoY}%;transform:scale(${C.photoZoom})"></div>` : `<div class="ph ini">${esc((C.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</div>`;
   const logoImg = C.logo ? `<span class="lgw${C.logoPlate?' plate':''}"><img class="lg" src="${C.logo}" alt="${esc(C.company||'Logo')}"></span>` : '';
   const LP = C.logoPos || 'izq';
   const logo = LP==='nombre' ? '<span></span>' : (logoImg || '<span></span>');
   const logoBig = LP==='nombre' && logoImg ? `<div class="lgn">${logoImg}</div>` : '';
-  const vcfLabel = (C.items.find(m=>m.id==='vcf')||{}).label || 'Guardar contacto';
+  const vcfItem = C.items.find(m=>m.id==='vcf') || {id:'vcf', label:'Guardar contacto'};
   const hdBg = J ? '#0d0d0f' : 'transparent', hdInk = J ? '#ffffff' : muted;
   const css = `*{box-sizing:border-box}html{min-height:100%;background:${page}}
 body{margin:0;min-height:100vh;font-family:${fb.css};color:${ink};-webkit-font-smoothing:antialiased;background:${FULL?card:pat};padding:${FULL?'0':'22px 16px 30px'}}
@@ -490,7 +517,11 @@ ${LP==='centro'?'.hd{justify-content:center;position:relative}.hd #share{positio
 .lgn{display:flex;justify-content:center;margin:${C.photoMode==='sin'?'4px':'0'} 0 18px}.lgn .lgw{max-width:90%}
 .lgt{font-family:${ft.css};font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:${hdInk}}
 #share{width:38px;height:38px;border-radius:${R===0?'2px':'50%'};border:1px solid ${J?'rgba(255,255,255,.25)':line};background:transparent;color:${J?'#fff':ink};display:grid;place-items:center;cursor:pointer}
-#share svg{width:17px;height:17px}#share.ok{background:${A};color:${accInk};border-color:${A}}
+#share svg{width:17px;height:17px}
+.hr{display:flex;align-items:center;gap:8px;flex:none}
+.lng{display:flex;border:1px solid ${J?'rgba(255,255,255,.25)':line};border-radius:${R===0?'2px':'999px'};padding:2px;gap:2px}
+.lb{font:600 11.5px/1 ${fb.css};letter-spacing:.06em;border:0;background:transparent;color:${J?'#fff':ink};padding:7px 9px;border-radius:${R===0?'1px':'999px'};cursor:pointer;opacity:.6}
+.lb[aria-pressed=true]{background:${J?'#fff':ink};color:${J?'#0d0d0f':card};opacity:1}#share.ok{background:${A};color:${accInk};border-color:${A}}
 .me{padding:${J?'24px':(C.photoMode==='sin' && LP!=='nombre' ? '10px' : '8px')} 22px 4px;text-align:center}
 .ph{width:118px;height:118px;border-radius:${R===0?'2px':'50%'};object-fit:cover;display:block;margin:0 auto 18px;box-shadow:0 0 0 4px ${card},0 0 0 5px ${line},0 14px 28px -16px rgba(0,0,0,.5)}
 .phw{overflow:hidden}.phw img{width:100%;height:100%;object-fit:cover;display:block}
@@ -516,12 +547,12 @@ em{font-style:normal;font-size:11px;color:#e0622a}
 ${J?`.ft::before{content:"";display:block;width:120px;height:7px;margin:0 auto 14px;background:url("${TRI_URL}") repeat-x 0 0/67px 7px}`:''}
 .ft a{font-size:11px;color:${muted};text-decoration:none;letter-spacing:.04em}`;
   const corners = C.decor==='corners' ? '<i class="cn a"></i><i class="cn b"></i><i class="cn c2"></i><i class="cn d"></i>' : '';
-  const body = `<main class="c">${corners}<div class="hd">${logo}<button id="share" type="button" aria-label="Compartir esta tarjeta">${svg('share')}</button></div>
-<div class="me">${logoBig}${photo}<h1>${esc(C.name)}</h1>${C.title?`<p class="ti">${esc(C.title)}</p>`:''}${C.company?`<p class="co">${esc(C.company)}</p>`:''}${C.bio?`<div class="dv"></div><p class="bio">${esc(C.bio)}</p>`:''}</div>
-<a class="sv" id="save" href="#" data-b="vcf">${svg('card')}${esc(vcfLabel)}</a>${quickHTML}${listHTML}
-<div class="ft">${C.credit?'<a href="https://maemmuki.github.io/webs.b/maemuki/" target="_blank" rel="noopener">Tarjeta digital por Maemuki</a>':''}</div></main>`;
+  const body = `<main class="c">${corners}<div class="hd">${logo}<div class="hr">${C.lang==='ambos'?'<div class="lng" role="group" aria-label="Idioma / Language"><button type="button" class="lb" data-l="es">ES</button><button type="button" class="lb" data-l="en">EN</button></div>':''}<button id="share" type="button" aria-label="Compartir / Share">${svg('share')}</button></div></div>
+<div class="me">${logoBig}${photo}<h1>${esc(C.name)}</h1>${(C.title||C.titleEn)?`<p class="ti">${TX(C.title||C.titleEn, C.titleEn)}</p>`:''}${C.company?`<p class="co">${esc(C.company)}</p>`:''}${(C.bio||C.bioEn)?`<div class="dv"></div><p class="bio">${TX(C.bio||C.bioEn, C.bioEn)}</p>`:''}</div>
+<a class="sv" id="save" href="#" data-b="vcf">${svg('card')}${TX(vcfItem.label||'Guardar contacto', enLabel(vcfItem))}</a>${quickHTML}${listHTML}
+<div class="ft">${C.credit?'<a href="https://maemmuki.github.io/webs.b/maemuki/" target="_blank" rel="noopener">'+TX('Tarjeta digital por Maemuki','Digital card by Maemuki')+'</a>':''}</div></main>`;
   const desc = [C.title, C.company].filter(Boolean).join(' · ');
-  return `<!doctype html>\n<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(C.name)}${C.company?' · '+esc(C.company):''}</title><meta name="description" content="${esc(desc)}"><meta property="og:title" content="${esc(C.name)}"><meta property="og:description" content="${esc(desc)}"><meta name="theme-color" content="${FULL?card:page}"><meta name="robots" content="noindex"><link rel="stylesheet" href="${fontLink}"><style>${css}</style></head><body>${body}<script type="application/json" id="maemuki-card">${publicData()}<\/script><script>(${cardRuntime.toString()})()<\/script></body></html>`;
+  return `<!doctype html>\n<html lang="${C.lang==='en'?'en':'es'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(C.name)}${C.company?' · '+esc(C.company):''}</title><meta name="description" content="${esc(desc)}"><meta property="og:title" content="${esc(C.name)}"><meta property="og:description" content="${esc(desc)}"><meta name="theme-color" content="${FULL?card:page}"><meta name="robots" content="noindex"><link rel="stylesheet" href="${fontLink}"><style>${css}</style></head><body>${body}<script type="application/json" id="maemuki-card">${publicData()}<\/script><script>(${cardRuntime.toString()})()<\/script></body></html>`;
 }
 
 // ===== UI =====
@@ -547,6 +578,7 @@ function renderStyle(){
   chipRow('decorChips', DECORS, 'decor');
   chipRow('patternChips', PATTERNS, 'pattern');
   chipRow('finishChips', FINISHES, 'finish');
+  chipRow('langChips', LANGS, 'lang'); $('enFields').hidden = C.lang==='es';
   chipRow('logoPosChips', LOGO_POS, 'logoPos');
   $('logoSize').value = C.logoSize; $('logoX').value = C.logoX||0; $('logoY').value = C.logoY||0; $('logoAdj').hidden = !C.logo;
   $('photoZoom').value = C.photoZoom; $('photoX').value = C.photoX; $('photoY').value = C.photoY; $('photoAdj').hidden = !C.photo || C.photoMode==='sin';
@@ -566,6 +598,7 @@ function renderItems(){
     <input type="checkbox" class="toggle" data-i="${i}" ${m.on?'checked':''} ${d.locked?'disabled':''} aria-label="Activar ${esc(m.label)}"></div>
     ${m.on ? (d.locked ? `<input type="text" data-i="${i}" data-k="label" maxlength="40" value="${esc(m.label)}" placeholder="Texto del botón" aria-label="Texto del botón">`
       : `<div class="two"><input type="text" data-i="${i}" data-k="label" maxlength="40" value="${esc(m.label)}" placeholder="Texto del botón" aria-label="Texto del botón"><input type="text" data-i="${i}" data-k="val" value="${esc(m.val)}" placeholder="${esc(d.ph)}" aria-label="${esc(d.hint)}"></div>`) : ''}
+    ${m.on && C.lang!=='es' ? `<input type="text" data-i="${i}" data-k="labelEn" maxlength="40" value="${esc(m.labelEn||'')}" placeholder="En inglés: ${esc(enLabel(m))}" aria-label="Texto del botón en inglés">` : ''}
   </div>`; }).join('');
 }
 const cardRepo = () => (GH.cardRepo || ((GH.user||'').trim().toLowerCase() + '.github.io')).trim();
@@ -581,7 +614,7 @@ let raf = 0;
 function renderAll(){ cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { $('screen').srcdoc = pageHTML(); renderLink(); save(); }); }
 function load(){
   C = DB.cards[DB.current];
-  $('fName').value=C.name; $('fTitle').value=C.title; $('fCompany').value=C.company; $('fBio').value=C.bio; $('fSlug').value=C.slug;
+  $('fName').value=C.name; $('fTitle').value=C.title; $('fCompany').value=C.company; $('fBio').value=C.bio; $('fSlug').value=C.slug; $('fTitleEn').value=C.titleEn||''; $('fBioEn').value=C.bioEn||'';
   $('ghUser').value=GH.user||''; $('ghRepo').value=GH.repo||''; $('ghToken').value=GH.token||''; $('ghCardRepo').value=cardRepo();
   $('pubMsg').hidden = true; renderSelect(); renderStyle(); renderItems(); renderAll();
   trimOldLogo(C);
@@ -607,6 +640,8 @@ document.addEventListener('input', e => {
   else if (t.id==='fTitle') C.title=t.value;
   else if (t.id==='fCompany') { C.company=t.value; renderSelect(); }
   else if (t.id==='fBio') C.bio=t.value;
+  else if (t.id==='fTitleEn') C.titleEn=t.value;
+  else if (t.id==='fBioEn') C.bioEn=t.value;
   else if (['logoSize','logoX','logoY','photoZoom','photoX','photoY'].includes(t.id)) C[t.id] = +t.value;
   else if (['cPage','cCard','cAccent','cIcon'].includes(t.id)) { C[{cPage:'page',cCard:'card',cAccent:'accent',cIcon:'icon'}[t.id]] = t.value; if (C.style!=='custom') { C.style='custom'; $('ambChips').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.amb==='custom')); } }
   else if (t.dataset.k) { const m=C.items[+t.dataset.i]; m[t.dataset.k]=t.value; if (t.dataset.k==='label') { const nm=t.closest('.item').querySelector('.nm'); if (nm&&nm.firstChild) nm.firstChild.textContent=t.value||' '; } }
@@ -636,7 +671,7 @@ document.addEventListener('click', e => {
   const am = e.target.closest('[data-amb]');
   if (am) { const id = am.dataset.amb; if (id!=='custom') Object.assign(C, pickTheme(id)); C.style = id; renderStyle(); renderAll(); return; }
   const ch = e.target.closest('.chip[data-k]');
-  if (ch) { C[ch.dataset.k] = ch.dataset.val; if (!['shape','shadow','decor','pattern','photoMode','finish','logoPos'].includes(ch.dataset.k) && C.style!=='jarana') C.style='custom'; renderStyle(); renderAll(); }
+  if (ch) { C[ch.dataset.k] = ch.dataset.val; if (!['shape','shadow','decor','pattern','photoMode','finish','logoPos','lang'].includes(ch.dataset.k) && C.style!=='jarana') C.style='custom'; renderStyle(); if (ch.dataset.k==='lang') renderItems(); renderAll(); }
 });
 $('fillJarana').addEventListener('click', () => {
   C.style='jarana'; Object.assign(C, pickTheme('jarana')); C.company = C.company || JARANA.company; C.logo = JARANA.logo;
