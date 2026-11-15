@@ -123,6 +123,13 @@ details.help{font-size:14px;color:var(--muted)}details.help summary{cursor:point
           <label class="f">Dirección del link <small id="slugHint"></small><input type="text" id="fSlug" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
         </div>
         <label class="f">Frase corta <small>opcional · máximo una línea</small><input type="text" id="fBio" maxlength="110" placeholder="Ej. Organizo tu cumpleaños, aniversario o evento de empresa."></label>
+        <div><span class="label">Logo de la empresa · opcional · sale arriba a la izquierda</span>
+        <div class="img-row" style="margin-top:8px">
+          <div class="thumb logo" id="logoThumb">Sin logo</div>
+          <label class="upload">Subir logo<input type="file" id="logoFile" accept="image/*"></label>
+          <button type="button" class="btn ghost sm" id="logoRemove" hidden>Quitar</button>
+        </div>
+        <label class="check" style="margin-top:8px"><input type="checkbox" id="fLogoPlate"> Poner el logo sobre una placa blanca (si el logo es oscuro y la tarjeta también)</label></div>
       </section>
 
       <section class="panel">
@@ -145,15 +152,11 @@ details.help{font-size:14px;color:var(--muted)}details.help summary{cursor:point
           <span class="label">Letra del texto</span><div class="chips" id="fontBodyChips"></div>
           <span class="label">Nombre en</span><div class="chips" id="caseChips"></div>
         </div>
+        <span class="label">Acabado del cuadro</span><div class="chips" id="finishChips"></div>
         <span class="label">Forma del cuadro</span><div class="chips" id="shapeChips"></div>
         <span class="label">Sombra y borde</span><div class="chips" id="shadowChips"></div>
         <span class="label">Detalle</span><div class="chips" id="decorChips"></div>
         <span class="label">Textura del fondo</span><div class="chips" id="patternChips"></div>
-        <div class="img-row">
-          <div class="thumb logo" id="logoThumb">Sin logo</div>
-          <label class="upload">Logo de la empresa<input type="file" id="logoFile" accept="image/*"></label>
-          <button type="button" class="btn ghost sm" id="logoRemove" hidden>Quitar</button>
-        </div>
         <label class="check"><input type="checkbox" id="fCredit"> Mostrar "Tarjeta digital por Maemuki" al final</label>
       </section>
 
@@ -274,9 +277,21 @@ const AMBIENTES = [
   {id:'bosque', name:'Verde bosque', page:'#11241c', card:'#f5f3ee', accent:'#1f4d3a', icon:'#e7ece6', fontTitle:'fraunces', fontBody:'manrope', shape:'soft', shadow:'deep', decor:'none', pattern:'dots', nameCase:'normal'},
   {id:'grafito', name:'Grafito', page:'#0e0f11', card:'#17181b', accent:'#f3f3f5', icon:'#24262b', fontTitle:'spacegrotesk', fontBody:'inter', shape:'soft', shadow:'line', decor:'none', pattern:'lines', nameCase:'normal'},
   {id:'minimal', name:'Minimal total', page:'#ffffff', card:'#ffffff', accent:'#1a1a1a', icon:'#f4f4f4', fontTitle:'manrope', fontBody:'manrope', shape:'full', shadow:'none', decor:'none', pattern:'plain', nameCase:'normal'},
+  {id:'platino', name:'Platino · plateado', page:'#1d1f23', card:'#cdd1d7', accent:'#15171a', icon:'#e9ebee', fontTitle:'archivo', fontBody:'inter', shape:'soft', shadow:'float', decor:'none', pattern:'plain', nameCase:'upper', finish:'plata'},
+  {id:'oro', name:'Oro · dorado', page:'#111111', card:'#d2b06a', accent:'#17130a', icon:'#f2e3b8', fontTitle:'cormorant', fontBody:'manrope', shape:'soft', shadow:'float', decor:'frame', pattern:'plain', nameCase:'upper', finish:'oro'},
+  {id:'centurion', name:'Negro metal', page:'#3b3c40', card:'#18181a', accent:'#d9dce1', icon:'#26262a', fontTitle:'archivo', fontBody:'inter', shape:'soft', shadow:'float', decor:'none', pattern:'lines', nameCase:'upper', finish:'negro'},
+  {id:'oro-rosa', name:'Oro rosa', page:'#2b1f1d', card:'#dcab9d', accent:'#2a1713', icon:'#f6dcd3', fontTitle:'playfair', fontBody:'manrope', shape:'soft', shadow:'deep', decor:'none', pattern:'plain', nameCase:'normal', finish:'rosa'},
   {id:'jarana', name:'Jarana · andino', page:'#efe8dc', card:'#fffdf8', accent:'#cc3700', icon:'#4e204b', fontTitle:'montserrat', fontBody:'montserrat', shape:'soft', shadow:'soft', decor:'none', pattern:'dots', nameCase:'upper'}
 ];
-const THEME_KEYS = ['page','card','accent','icon','fontTitle','fontBody','shape','shadow','decor','pattern','nameCase'];
+const FINISHES = [{id:'liso', name:'Liso'}, {id:'plata', name:'Metal plateado'}, {id:'oro', name:'Metal dorado'}, {id:'negro', name:'Metal negro'}, {id:'rosa', name:'Oro rosa'}];
+// Metal cepillado: color base (para el contraste) + degradado con brillo
+const METALS = {
+  plata:{base:'#cdd1d7', bg:'linear-gradient(135deg,#f1f3f5 0%,#bcc1c8 22%,#eceef1 46%,#a9afb7 70%,#e1e4e8 100%)', light:true},
+  oro:{base:'#d2b06a', bg:'linear-gradient(135deg,#f6e6b6 0%,#c8a14e 24%,#f2da98 47%,#b48c3c 72%,#ead08c 100%)', light:true},
+  negro:{base:'#18181a', bg:'linear-gradient(135deg,#323236 0%,#121213 38%,#2b2b2f 58%,#0d0d0e 100%)', light:false},
+  rosa:{base:'#dcab9d', bg:'linear-gradient(135deg,#f6d9cf 0%,#c98f80 24%,#f2cdc0 47%,#b77d6f 72%,#ecc4b7 100%)', light:true}
+};
+const THEME_KEYS = ['page','card','accent','icon','fontTitle','fontBody','shape','shadow','decor','pattern','nameCase','finish'];
 const TRI_COLORS = ['#732F21','#9B6031','#1A3F54','#00B4C7','#03482C','#00A650','#B32C31','#F0652A'];
 const TRI_SVG = (() => { let d=''; for (let k=0;k<4;k++){ const x=k*50; d+=`<path d="M${x} 0h30l-15 21z" fill="${TRI_COLORS[k*2]}"/><path d="M${x+25} 21h30l-15-21z" fill="${TRI_COLORS[k*2+1]}"/>`; } return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 21">${d}</svg>`; })();
 const TRI_URL = 'data:image/svg+xml,' + encodeURIComponent(TRI_SVG);
@@ -293,7 +308,7 @@ function slugify(s){
   return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
     .replace(/&/g,' y ').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'tarjeta';
 }
-function pickTheme(id){ const a = AMBIENTES.find(x=>x.id===id) || AMBIENTES[0]; const o = {}; THEME_KEYS.forEach(k => o[k] = a[k]); return o; }
+function pickTheme(id){ const a = AMBIENTES.find(x=>x.id===id) || AMBIENTES[0]; const o = {}; THEME_KEYS.forEach(k => o[k] = a[k]); o.finish = a.finish || 'liso'; return o; }
 function blankCard(name){
   return {name:name||'Nombre Apellido', title:'', company:'', bio:'', slug:slugify(name||'nombre-apellido'),
     style:'ejecutivo', ...pickTheme('ejecutivo'), photo:null, photoMode:'con', logo:null, credit:true, published:false,
@@ -320,6 +335,7 @@ function normalize(c){
   if (c.style==='jarana' && !c.page) Object.assign(out, pickTheme('jarana'));
   if (!AMBIENTES.some(s=>s.id===out.style) && out.style!=='custom') out.style = 'ejecutivo';
   if (out.photoMode!=='sin') out.photoMode = 'con';
+  if (!METALS[out.finish]) out.finish = 'liso';
   if (!FONTS[out.fontTitle]) out.fontTitle = 'inter'; if (!FONTS[out.fontBody]) out.fontBody = 'inter';
   out.slug = slugify(out.slug || out.name);
   return out;
@@ -400,11 +416,13 @@ const inkOn = bg => lum(bg) > 0.42 ? '#141416' : '#f5f5f7';
 
 function pageHTML(){
   const J = C.style==='jarana';
-  const card = C.card, page = C.page, dark = lum(card) < 0.3;
+  const MT = METALS[C.finish];
+  const card = MT ? MT.base : C.card, page = C.page, dark = lum(card) < 0.3;
   const ink = inkOn(card), muted = mixC(ink, card, dark?0.38:0.42), line = mixC(ink, card, dark?0.85:0.9);
   let A = C.accent; if (contrast(A, card) < 1.8) A = ink;           // que el botón siempre se vea
   const accInk = inkOn(A);
-  let icon = C.icon || mixC(ink, card, 0.94); const iconInk = contrast(inkOn(icon), icon) >= 3 ? inkOn(icon) : ink;
+  let icon = MT ? (MT.light ? 'rgba(255,255,255,.42)' : 'rgba(255,255,255,.07)') : (C.icon || mixC(ink, card, 0.94));
+  const iconInk = MT ? ink : (contrast(inkOn(icon), icon) >= 3 ? inkOn(icon) : ink);
   const pageInk = inkOn(page);
   const ft = FONTS[C.fontTitle] || FONTS.inter, fb = FONTS[C.fontBody] || FONTS.inter;
   const fontLink = 'https://fonts.googleapis.com/css2?' + [...new Set([ft.gf, fb.gf])].map(f=>'family='+f).join('&') + '&display=swap';
@@ -427,18 +445,19 @@ function pageHTML(){
   const quickHTML = quick.length ? `<div class="q">${quick.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="qi">${svg(icn(m.id))}</span><span class="ql">${esc(m.label)}${miss(m)}</span></a>`).join('')}</div>` : '';
   const listHTML = list.length ? `<div class="l">${list.map(m=>`<a href="${esc(hrefFor(m))}"${ext(m)} data-b="${m.id}"><span class="li">${svg(icn(m.id))}</span><span class="lt">${esc(m.label)}${miss(m)}</span><span class="lc">${svg('chev')}</span></a>`).join('')}</div>` : '';
   const photo = C.photoMode==='sin' ? '' : C.photo ? `<img class="ph" src="${C.photo}" alt="${esc(C.name)}">` : `<div class="ph ini">${esc((C.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</div>`;
-  const logo = C.logo ? `<img class="lg" src="${C.logo}" alt="${esc(C.company||'Logo')}">` : (C.company ? `<span class="lgt">${esc(C.company)}</span>` : '<span></span>');
+  const logo = C.logo ? `<span class="lgw${C.logoPlate?' plate':''}"><img class="lg" src="${C.logo}" alt="${esc(C.company||'Logo')}"></span>` : '<span></span>';
   const vcfLabel = (C.items.find(m=>m.id==='vcf')||{}).label || 'Guardar contacto';
   const hdBg = J ? '#0d0d0f' : 'transparent', hdInk = J ? '#ffffff' : muted;
   const css = `*{box-sizing:border-box}html{min-height:100%;background:${page}}
 body{margin:0;min-height:100vh;font-family:${fb.css};color:${ink};-webkit-font-smoothing:antialiased;background:${FULL?card:pat};padding:${FULL?'0':'22px 16px 30px'}}
-.c{position:relative;max-width:${FULL?'520px':'420px'};margin:0 auto;background:${card};border-radius:${R}px;overflow:hidden;box-shadow:${FULL?'none':sh};${FULL?'min-height:100vh;':''}}
+.c{position:relative;max-width:${FULL?'520px':'420px'};margin:0 auto;background:${MT ? `repeating-linear-gradient(90deg, rgba(255,255,255,${MT.light?'.06':'.025'}) 0 1px, rgba(0,0,0,${MT.light?'.03':'.06'}) 1px 3px), ${MT.bg}` : card};border-radius:${R}px;overflow:hidden;box-shadow:${FULL?'none':sh};${FULL?'min-height:100vh;':''}}
 ${C.decor==='bar'?`.c::before{content:"";display:block;height:5px;background:${A}}`:''}
 ${C.decor==='frame'?`.c::after{content:"";position:absolute;inset:9px;border:1px solid ${mixC(A,card,0.55)};border-radius:${Math.max(0,R-6)}px;pointer-events:none}`:''}
 ${C.decor==='corners'?`.cn{position:absolute;width:22px;height:22px;border:0 solid ${A};pointer-events:none;z-index:2}.cn.a{top:10px;left:10px;border-top-width:2px;border-left-width:2px}.cn.b{top:10px;right:10px;border-top-width:2px;border-right-width:2px}.cn.c2{bottom:10px;left:10px;border-bottom-width:2px;border-left-width:2px}.cn.d{bottom:10px;right:10px;border-bottom-width:2px;border-right-width:2px}`:''}
 .hd{display:flex;justify-content:space-between;align-items:center;padding:20px 22px 14px;min-height:62px;background:${hdBg};${J?'position:relative;padding-bottom:26px':''}}
 ${J?`.hd::after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px;background:url("${TRI_URL}") repeat-x 0 0/96px 10px}`:''}
-.lg{height:${J?'30px':'28px'};width:auto;max-width:62%;object-fit:contain;display:block}
+.lgw{display:inline-flex;max-width:62%}.lgw.plate{background:#fff;padding:6px 10px;border-radius:${R===0?'2px':'8px'};box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.lg{height:${J?'30px':'28px'};width:auto;max-width:100%;object-fit:contain;display:block}
 .lgt{font-family:${ft.css};font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:${hdInk}}
 #share{width:38px;height:38px;border-radius:${R===0?'2px':'50%'};border:1px solid ${J?'rgba(255,255,255,.25)':line};background:transparent;color:${J?'#fff':ink};display:grid;place-items:center;cursor:pointer}
 #share svg{width:17px;height:17px}#share.ok{background:${A};color:${accInk};border-color:${A}}
@@ -446,6 +465,7 @@ ${J?`.hd::after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px
 .ph{width:118px;height:118px;border-radius:${R===0?'2px':'50%'};object-fit:cover;display:block;margin:0 auto 18px;box-shadow:0 0 0 4px ${card},0 0 0 5px ${line},0 14px 28px -16px rgba(0,0,0,.5)}
 .ini{display:grid;place-items:center;background:${icon};color:${iconInk};font-family:${ft.css};font-size:38px;font-weight:600}
 h1{margin:0;font-family:${ft.css};font-size:${ft.heavy||C.fontTitle==='oswald'||C.fontTitle==='barlowc'?'32px':UP?'24px':'28px'};line-height:1.12;font-weight:${['cormorant','playfair','libre','fraunces'].includes(C.fontTitle)?'600':ft.heavy?'400':'700'};letter-spacing:${UP?'.08em':'-.01em'};${UP?'text-transform:uppercase;':''}}
+.me h1{${MT ? (MT.light ? 'text-shadow:0 1px 0 rgba(255,255,255,.55),0 -1px 0 rgba(0,0,0,.18);' : 'text-shadow:0 1px 0 rgba(0,0,0,.7),0 -1px 0 rgba(255,255,255,.08);') : ''}}
 .ti{margin:8px 0 0;font-size:15px;color:${muted};font-weight:500}
 .co{margin:6px 0 0;font-size:11.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:${contrast(A,card)>=3?A:muted}}
 .dv{width:36px;height:2px;background:${A};margin:16px auto 0;opacity:${contrast(A,card)>=3?1:.5}}
@@ -482,7 +502,7 @@ function chipRow(el, list, key, labelFn){
   $(el).innerHTML = list.map(x => `<button type="button" class="chip${labelFn?' font':''}" data-k="${key}" data-val="${x.id||x}" aria-pressed="${(x.id||x)===C[key]}"${labelFn?` style="font-family:${labelFn(x).replace(/"/g,'&quot;')}"`:''}>${x.name||FONTS[x].name}</button>`).join('');
 }
 function renderStyle(){
-  $('ambChips').innerHTML = AMBIENTES.map(a => `<button type="button" data-amb="${a.id}" aria-pressed="${a.id===C.style}"><div class="sw2" style="background:${a.page}"><i style="background:${a.card};border-radius:${(SHAPES.find(s=>s.id===a.shape)||{}).r>10?'7px':a.shape==='soft'?'3px':'0'}"></i><b style="background:${a.accent}"></b></div><span>${a.name}</span></button>`).join('')
+  $('ambChips').innerHTML = AMBIENTES.map(a => `<button type="button" data-amb="${a.id}" aria-pressed="${a.id===C.style}"><div class="sw2" style="background:${a.page}"><i style="background:${METALS[a.finish] ? METALS[a.finish].bg : a.card};border-radius:${(SHAPES.find(s=>s.id===a.shape)||{}).r>10?'7px':a.shape==='soft'?'3px':'0'}"></i><b style="background:${a.accent}"></b></div><span>${a.name}</span></button>`).join('')
     + `<button type="button" data-amb="custom" aria-pressed="${C.style==='custom'}"><div class="sw2" style="background:repeating-linear-gradient(45deg,#eee 0 6px,#fff 6px 12px)"><i style="background:${C.card}"></i><b style="background:${C.accent}"></b></div><span>Mi combinación</span></button>`;
   const J = C.style==='jarana';
   $('customBox').hidden = J;
@@ -495,6 +515,8 @@ function renderStyle(){
   chipRow('shadowChips', SHADOWS, 'shadow');
   chipRow('decorChips', DECORS, 'decor');
   chipRow('patternChips', PATTERNS, 'pattern');
+  chipRow('finishChips', FINISHES, 'finish');
+  $('fLogoPlate').checked = !!C.logoPlate;
   $('logoThumb').innerHTML = C.logo ? `<img src="${C.logo}" alt="">` : 'Sin logo'; $('logoRemove').hidden = !C.logo;
   $('photoThumb').innerHTML = C.photo ? `<img src="${C.photo}" alt="">` : (C.photoMode==='sin' ? 'Sin foto' : 'Iniciales'); $('photoThumb').style.opacity = C.photoMode==='sin' ? .45 : 1; $('photoRemove').hidden = !C.photo;
   $('fCredit').checked = !!C.credit;
@@ -557,6 +579,7 @@ document.addEventListener('change', e => {
   const t = e.target;
   if (t.classList.contains('toggle')) { C.items[+t.dataset.i].on = t.checked; renderItems(); renderAll(); }
   if (t.id==='fCredit') { C.credit = t.checked; renderAll(); }
+  if (t.id==='fLogoPlate') { C.logoPlate = t.checked; renderAll(); }
 });
 document.addEventListener('click', e => {
   const mv = e.target.closest('.mv');
@@ -565,7 +588,7 @@ document.addEventListener('click', e => {
   const am = e.target.closest('[data-amb]');
   if (am) { const id = am.dataset.amb; if (id!=='custom') Object.assign(C, pickTheme(id)); C.style = id; renderStyle(); renderAll(); return; }
   const ch = e.target.closest('.chip[data-k]');
-  if (ch) { C[ch.dataset.k] = ch.dataset.val; if (!['shape','shadow','decor','pattern','photoMode'].includes(ch.dataset.k) && C.style!=='jarana') C.style='custom'; renderStyle(); renderAll(); }
+  if (ch) { C[ch.dataset.k] = ch.dataset.val; if (!['shape','shadow','decor','pattern','photoMode','finish'].includes(ch.dataset.k) && C.style!=='jarana') C.style='custom'; renderStyle(); renderAll(); }
 });
 $('fillJarana').addEventListener('click', () => {
   C.style='jarana'; Object.assign(C, pickTheme('jarana')); C.company = C.company || JARANA.company; C.logo = JARANA.logo;
