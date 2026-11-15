@@ -140,6 +140,8 @@ details.help{font-size:14px;color:var(--muted)}details.help summary{cursor:point
         </div>
         <div class="adj" id="logoAdj" style="margin-top:10px">
           <label class="rg">Tamaño del logo<input type="range" id="logoSize" min="16" max="140" step="1"></label>
+          <label class="rg">Mover el logo a los lados<input type="range" id="logoX" min="-60" max="60" step="1"></label>
+          <label class="rg">Mover el logo arriba / abajo<input type="range" id="logoY" min="-30" max="40" step="1"></label>
           <div><span class="label">Lugar del logo</span><div class="chips" id="logoPosChips" style="margin-top:6px"></div></div>
           <label class="check"><input type="checkbox" id="fLogoPlate"> Poner el logo sobre una placa blanca (si el logo es oscuro y la tarjeta también)</label>
           <p style="margin:0;font-size:12.5px;color:var(--muted)">Al subir el logo se le quitan solos los bordes vacíos para que se vea más grande.</p>
@@ -352,6 +354,7 @@ function normalize(c){
   if (out.photoMode!=='sin') out.photoMode = 'con';
   if (!METALS[out.finish]) out.finish = 'liso';
   out.logoSize = Math.min(140, Math.max(16, +out.logoSize || 28));
+  out.logoX = Math.min(60, Math.max(-60, +out.logoX || 0)); out.logoY = Math.min(40, Math.max(-30, +out.logoY || 0));
   if (!LOGO_POS.some(x=>x.id===out.logoPos)) out.logoPos = 'izq';
   out.photoZoom = Math.min(3, Math.max(1, +out.photoZoom || 1));
   out.photoX = isFinite(+out.photoX) && out.photoX!=='' && out.photoX!=null ? Math.min(100, Math.max(0, +out.photoX)) : 50;
@@ -477,11 +480,12 @@ body{margin:0;min-height:100vh;font-family:${fb.css};color:${ink};-webkit-font-s
 ${C.decor==='bar'?`.c::before{content:"";display:block;height:5px;background:${A}}`:''}
 ${C.decor==='frame'?`.c::after{content:"";position:absolute;inset:9px;border:1px solid ${mixC(A,card,0.55)};border-radius:${Math.max(0,R-6)}px;pointer-events:none}`:''}
 ${C.decor==='corners'?`.cn{position:absolute;width:22px;height:22px;border:0 solid ${A};pointer-events:none;z-index:2}.cn.a{top:10px;left:10px;border-top-width:2px;border-left-width:2px}.cn.b{top:10px;right:10px;border-top-width:2px;border-right-width:2px}.cn.c2{bottom:10px;left:10px;border-bottom-width:2px;border-left-width:2px}.cn.d{bottom:10px;right:10px;border-bottom-width:2px;border-right-width:2px}`:''}
-.hd{display:flex;justify-content:space-between;align-items:center;padding:20px 22px 14px;min-height:62px;background:${hdBg};${J?'position:relative;padding-bottom:26px':''}}
+.hd{display:flex;justify-content:space-between;align-items:${LP==='izq'?'flex-start':'center'};padding:20px 22px 14px;min-height:62px;background:${hdBg};${J?'position:relative;padding-bottom:26px':''}}
 ${J?`.hd::after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px;background:url("${TRI_URL}") repeat-x 0 0/96px 10px}`:''}
 .lgw{display:inline-flex;max-width:62%}.lgw.plate{background:#fff;padding:6px 10px;border-radius:${R===0?'2px':'8px'};box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .lg{height:${C.logoSize}px;width:auto;max-width:100%;object-fit:contain;display:block}
-.lgw{max-width:${LP==='izq'?'72%':'86%'}}
+.lgw{display:inline-flex;flex:none;max-width:${LP==='izq'?'72%':'86%'};transform:translate(${C.logoX||0}px,${C.logoY||0}px)}
+.lgw img{object-position:${LP==='izq'?'left top':'center'}}
 ${LP==='centro'?'.hd{justify-content:center;position:relative}.hd #share{position:absolute;right:22px;top:20px}':''}
 .lgn{display:flex;justify-content:center;margin:${C.photoMode==='sin'?'4px':'0'} 0 18px}.lgn .lgw{max-width:90%}
 .lgt{font-family:${ft.css};font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:${hdInk}}
@@ -544,7 +548,7 @@ function renderStyle(){
   chipRow('patternChips', PATTERNS, 'pattern');
   chipRow('finishChips', FINISHES, 'finish');
   chipRow('logoPosChips', LOGO_POS, 'logoPos');
-  $('logoSize').value = C.logoSize; $('logoAdj').hidden = !C.logo;
+  $('logoSize').value = C.logoSize; $('logoX').value = C.logoX||0; $('logoY').value = C.logoY||0; $('logoAdj').hidden = !C.logo;
   $('photoZoom').value = C.photoZoom; $('photoX').value = C.photoX; $('photoY').value = C.photoY; $('photoAdj').hidden = !C.photo || C.photoMode==='sin';
   $('fLogoPlate').checked = !!C.logoPlate;
   $('logoThumb').innerHTML = C.logo ? `<img src="${C.logo}" alt="">` : 'Sin logo'; $('logoRemove').hidden = !C.logo;
@@ -580,6 +584,19 @@ function load(){
   $('fName').value=C.name; $('fTitle').value=C.title; $('fCompany').value=C.company; $('fBio').value=C.bio; $('fSlug').value=C.slug;
   $('ghUser').value=GH.user||''; $('ghRepo').value=GH.repo||''; $('ghToken').value=GH.token||''; $('ghCardRepo').value=cardRepo();
   $('pubMsg').hidden = true; renderSelect(); renderStyle(); renderItems(); renderAll();
+  trimOldLogo(C);
+}
+// Logos subidos antes del recorte automático: se recortan una vez al abrir la tarjeta
+function trimOldLogo(card){
+  if (!card.logo || card.logoTrimmed || !/^data:image\//.test(card.logo)) return;
+  const im = new Image();
+  im.onload = () => {
+    let cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height; cv.getContext('2d').drawImage(im, 0, 0);
+    const out = trimCanvas(cv); card.logoTrimmed = true;
+    if (out.width < im.width - 4 || out.height < im.height - 4) card.logo = out.toDataURL('image/png');
+    if (card === C) { renderStyle(); renderAll(); } else save();
+  };
+  im.src = card.logo;
 }
 function showMsg(id, text, kind){ const el=$(id); el.textContent=text; el.className='msg '+(kind||''); el.hidden=false; }
 function uniqueKey(base){ let k=base, n=2; while (DB.cards[k]) k = base+'-'+n++; return k; }
@@ -590,7 +607,7 @@ document.addEventListener('input', e => {
   else if (t.id==='fTitle') C.title=t.value;
   else if (t.id==='fCompany') { C.company=t.value; renderSelect(); }
   else if (t.id==='fBio') C.bio=t.value;
-  else if (['logoSize','photoZoom','photoX','photoY'].includes(t.id)) C[t.id] = +t.value;
+  else if (['logoSize','logoX','logoY','photoZoom','photoX','photoY'].includes(t.id)) C[t.id] = +t.value;
   else if (['cPage','cCard','cAccent','cIcon'].includes(t.id)) { C[{cPage:'page',cCard:'card',cAccent:'accent',cIcon:'icon'}[t.id]] = t.value; if (C.style!=='custom') { C.style='custom'; $('ambChips').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.amb==='custom')); } }
   else if (t.dataset.k) { const m=C.items[+t.dataset.i]; m[t.dataset.k]=t.value; if (t.dataset.k==='label') { const nm=t.closest('.item').querySelector('.nm'); if (nm&&nm.firstChild) nm.firstChild.textContent=t.value||' '; } }
   else if (t.id==='ghUser') { GH.user=t.value.trim(); saveGH(); }
@@ -660,7 +677,7 @@ function readImage(file, max, type, cb){
 }
 $('photoReset').addEventListener('click', () => { C.photoZoom=1; C.photoX=50; C.photoY=50; renderStyle(); renderAll(); });
 $('photoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 640, 'image/jpeg', d => { C.photo=d; C.photoMode='con'; C.photoZoom=1; C.photoX=50; C.photoY=50; renderStyle(); renderAll(); }); e.target.value=''; });
-$('logoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 500, 'image/png', d => { C.logo=d; const im=new Image(); im.onload=()=>{ const ar=im.width/im.height; if (ar < 1.7) { C.logoPos='nombre'; C.logoSize=72; } else { C.logoPos='izq'; C.logoSize=34; } renderStyle(); renderAll(); }; im.src=d; renderStyle(); renderAll(); }); e.target.value=''; });
+$('logoFile').addEventListener('change', e => { const f=e.target.files[0]; if (!f) return; readImage(f, 500, 'image/png', d => { C.logo=d; C.logoTrimmed=true; C.logoX=0; C.logoY=0; const im=new Image(); im.onload=()=>{ const ar=im.width/im.height; if (ar < 1.7) { C.logoPos='nombre'; C.logoSize=72; } else { C.logoPos='izq'; C.logoSize=34; } renderStyle(); renderAll(); }; im.src=d; renderStyle(); renderAll(); }); e.target.value=''; });
 $('photoRemove').addEventListener('click', () => { C.photo=null; renderStyle(); renderAll(); });
 $('logoRemove').addEventListener('click', () => { C.logo=null; renderStyle(); renderAll(); });
 $('cardSelect').addEventListener('change', e => { DB.current=e.target.value; save(); load(); });
